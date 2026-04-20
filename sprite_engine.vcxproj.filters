@@ -1,0 +1,96 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="source\main.cpp" />
+    <ClCompile Include="source\platform\input.cpp">
+      <Filter>platform</Filter>
+    </ClCompile>
+    <ClCompile Include="source\platform\timer.cpp">
+      <Filter>platform</Filter>
+    </ClCompile>
+    <ClCompile Include="source\platform\window.cpp">
+      <Filter>platform</Filter>
+    </ClCompile>
+    <ClCompile Include="source\engine_test.cpp" />
+    <ClCompile Include="source\platform\sdl_init.cpp">
+      <Filter>platform</Filter>
+    </ClCompile>
+    <ClCompile Include="source\sprite_set.cpp" />
+    <ClCompile Include="source\particle_system.cpp" />
+    <ClCompile Include="source\utility.cpp" />
+    <ClCompile Include="source\scroll_plane.cpp" />
+    <ClCompile Include="source\render\engine_dx.cpp">
+      <Filter>render</Filter>
+    </ClCompile>
+    <ClCompile Include="source\render\shader_dx.cpp">
+      <Filter>render</Filter>
+    </ClCompile>
+    <ClCompile Include="source\render\utility_dx.cpp">
+      <Filter>render</Filter>
+    </ClCompile>
+    <ClCompile Include="source\collision.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="platform">
+      <UniqueIdentifier>{17464240-5c91-4eea-87de-4bc753d877b0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="references">
+      <UniqueIdentifier>{8431bcf0-407f-479e-ba24-571067fe517b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="render">
+      <UniqueIdentifier>{2204abf7-085e-46ed-a773-e1a7ac2fa36f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="render\shaders">
+      <UniqueIdentifier>{7674c795-7c28-4cdf-89fd-b98dd1cf4c73}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="source\platform\input.h">
+      <Filter>platform</Filter>
+    </ClInclude>
+    <ClInclude Include="source\platform\timer.h">
+      <Filter>platform</Filter>
+    </ClInclude>
+    <ClInclude Include="source\platform\window.h">
+      <Filter>platform</Filter>
+    </ClInclude>
+    <ClInclude Include="source\engine_test.h" />
+    <ClInclude Include="source\platform\sdl_init.h">
+      <Filter>platform</Filter>
+    </ClInclude>
+    <ClInclude Include="source\sprite_set.h" />
+    <ClInclude Include="source\particle_system.h" />
+    <ClInclude Include="source\utility.h" />
+    <ClInclude Include="source\scroll_plane.h" />
+    <ClInclude Include="source\render\engine_dx.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="source\render\shader_dx.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="source\render\utility_dx.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="source\collision.h" />
+    <ClInclude Include="source\sprite.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="references\SDL2.ref">
+      <Filter>references</Filter>
+    </CustomBuild>
+    <CustomBuild Include="references\libpng16.ref">
+      <Filter>references</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="source\render\shaders\sprite_gs.hlsl">
+      <Filter>render\shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="source\render\shaders\sprite_ps.hlsl">
+      <Filter>render\shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="source\render\shaders\sprite_vs.hlsl">
+      <Filter>render\shaders</Filter>
+    </FxCompile>
+  </ItemGroup>
+</Project>
