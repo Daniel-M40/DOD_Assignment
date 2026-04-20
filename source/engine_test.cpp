@@ -5,10 +5,17 @@
 #include <math.h>
 #include <sdl.h>
 #include <thread>
+
+#include "circle.h"
+#include "sim_config.h"
+#include "utility.h"
 #include "render/engine_dx.h"
 
 namespace msc
 {
+	std::vector<Circle> circles;
+	SimConfig config = {};
+
 	// Constructor initialises SDL to receive input/window events and also creates a (hidden) window
 	EngineTest::EngineTest() : mSDL(SDL_INIT_EVENTS), mWindow("Sprite Engine Test", false)
 	{
@@ -25,6 +32,27 @@ namespace msc
 	// Load and pre-process game resources. Returns true on success
 	bool EngineTest::SceneSetup()
 	{
+		circles = std::vector<Circle>(config.numCircles);
+
+		for (int i = 0; i < config.numCircles; i++)
+		{
+			float worldX = config.worldSize.x();
+			float worldY = config.worldSize.y();
+
+			float minVel = config.maxVelocity.x();
+			float maxVel = config.maxVelocity.y();
+
+			float x = msc::RandomInRange(-worldX, worldX);
+			float y = msc::RandomInRange(-worldY, worldY);
+
+			float velX = msc::RandomInRange(minVel, maxVel);
+			float velY = msc::RandomInRange(minVel, maxVel);
+
+			circles[i].position = Vector2f(x, y);
+			circles[i].velocity= Vector2f(velX, velY);
+			circles[i].colour = Vector3f(rand() / (float)RAND_MAX, rand() / (float)RAND_MAX, rand() / (float)RAND_MAX);
+		}
+
 
 		return true;
 	}

@@ -15,10 +15,6 @@
     <ClCompile Include="source\platform\sdl_init.cpp">
       <Filter>platform</Filter>
     </ClCompile>
-    <ClCompile Include="source\sprite_set.cpp" />
-    <ClCompile Include="source\particle_system.cpp" />
-    <ClCompile Include="source\utility.cpp" />
-    <ClCompile Include="source\scroll_plane.cpp" />
     <ClCompile Include="source\render\engine_dx.cpp">
       <Filter>render</Filter>
     </ClCompile>
@@ -28,7 +24,21 @@
     <ClCompile Include="source\render\utility_dx.cpp">
       <Filter>render</Filter>
     </ClCompile>
-    <ClCompile Include="source\collision.cpp" />
+    <ClCompile Include="source\particle_system.cpp">
+      <Filter>particle system</Filter>
+    </ClCompile>
+    <ClCompile Include="source\collision.cpp">
+      <Filter>sprites</Filter>
+    </ClCompile>
+    <ClCompile Include="source\scroll_plane.cpp">
+      <Filter>sprites</Filter>
+    </ClCompile>
+    <ClCompile Include="source\sprite_set.cpp">
+      <Filter>sprites</Filter>
+    </ClCompile>
+    <ClCompile Include="source\utility.cpp">
+      <Filter>utility</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="platform">
@@ -42,6 +52,21 @@
     </Filter>
     <Filter Include="render\shaders">
       <UniqueIdentifier>{7674c795-7c28-4cdf-89fd-b98dd1cf4c73}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="sprites">
+      <UniqueIdentifier>{69668c9f-acc6-497a-bfc7-afc85778505d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="particle system">
+      <UniqueIdentifier>{324ca033-842b-457d-9b52-a96622fa6ba9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="utility">
+      <UniqueIdentifier>{41801700-7dc7-4aef-947f-c943d74127ad}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="simulation">
+      <UniqueIdentifier>{9ba459d3-388d-42f4-be34-d50c236bec33}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NewFilter1">
+      <UniqueIdentifier>{76cf88ce-2517-43b1-a0a0-95db5966aa39}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -58,10 +83,6 @@
     <ClInclude Include="source\platform\sdl_init.h">
       <Filter>platform</Filter>
     </ClInclude>
-    <ClInclude Include="source\sprite_set.h" />
-    <ClInclude Include="source\particle_system.h" />
-    <ClInclude Include="source\utility.h" />
-    <ClInclude Include="source\scroll_plane.h" />
     <ClInclude Include="source\render\engine_dx.h">
       <Filter>render</Filter>
     </ClInclude>
@@ -71,8 +92,30 @@
     <ClInclude Include="source\render\utility_dx.h">
       <Filter>render</Filter>
     </ClInclude>
-    <ClInclude Include="source\collision.h" />
-    <ClInclude Include="source\sprite.h" />
+    <ClInclude Include="source\particle_system.h">
+      <Filter>particle system</Filter>
+    </ClInclude>
+    <ClInclude Include="source\collision.h">
+      <Filter>sprites</Filter>
+    </ClInclude>
+    <ClInclude Include="source\scroll_plane.h">
+      <Filter>sprites</Filter>
+    </ClInclude>
+    <ClInclude Include="source\sprite.h">
+      <Filter>sprites</Filter>
+    </ClInclude>
+    <ClInclude Include="source\sprite_set.h">
+      <Filter>sprites</Filter>
+    </ClInclude>
+    <ClInclude Include="source\utility.h">
+      <Filter>utility</Filter>
+    </ClInclude>
+    <ClInclude Include="source\circle.h">
+      <Filter>simulation</Filter>
+    </ClInclude>
+    <ClInclude Include="source\sim_config.h">
+      <Filter>simulation</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="references\SDL2.ref">

@@ -147,6 +147,7 @@
       <DisableSpecificWarnings>
       </DisableSpecificWarnings>
       <FloatingPointModel>Fast</FloatingPointModel>
+      <LanguageStandard>stdcpp14</LanguageStandard>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -174,6 +175,8 @@
     <ClCompile Include="source\utility.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="source\sim_config.h" />
+    <ClInclude Include="source\circle.h" />
     <ClInclude Include="source\collision.h" />
     <ClInclude Include="source\engine_test.h" />
     <ClInclude Include="source\particle_system.h" />
