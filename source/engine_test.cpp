@@ -65,6 +65,16 @@ namespace msc
 	{
 		for (uint32_t i = 0; i < mActiveCount; ++i)
 		{
+			if (mPosX[i] >= SimConfig::WORLD_SIZE_X || mPosX[i] <= -SimConfig::WORLD_SIZE_X)
+			{
+				mVelX[i] = -mVelX[i];
+			}
+
+			if (mPosY[i] >= SimConfig::WORLD_SIZE_Y || mPosY[i] <= -SimConfig::WORLD_SIZE_Y)
+			{
+				mVelY[i] = -mVelY[i];
+			}
+
 			mPosX[i] += mVelX[i] * mFrameTime;
 			mPosY[i] += mVelY[i] * mFrameTime;
 		}
