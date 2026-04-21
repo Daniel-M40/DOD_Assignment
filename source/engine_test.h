@@ -11,6 +11,7 @@
 #include "platform/sdl_init.h"
 #include "platform/timer.h"
 #include "platform/window.h"
+#include "circle_gpu.h"
 
 #include <Eigen/Core>
 using Eigen::Vector2f;
@@ -103,6 +104,9 @@ namespace msc
 		std::vector<int32_t> mHP;
 		std::vector<std::string> mNames;
 		uint32_t mActiveCount = 0;
+
+		std::vector<CircleGPU> gpuData;
+
 
 		std::unique_ptr<EngineDX> mEngine;
 		Vector2i mWindowSize;

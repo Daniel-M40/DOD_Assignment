@@ -126,13 +126,13 @@
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="source\render\shaders\sprite_gs.hlsl">
+    <FxCompile Include="source\render\shaders\circle_gs.hlsl">
       <Filter>render\shaders</Filter>
     </FxCompile>
-    <FxCompile Include="source\render\shaders\sprite_ps.hlsl">
+    <FxCompile Include="source\render\shaders\circle_ps.hlsl">
       <Filter>render\shaders</Filter>
     </FxCompile>
-    <FxCompile Include="source\render\shaders\sprite_vs.hlsl">
+    <FxCompile Include="source\render\shaders\circle_vs.hlsl">
       <Filter>render\shaders</Filter>
     </FxCompile>
   </ItemGroup>

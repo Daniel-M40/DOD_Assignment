@@ -12,6 +12,7 @@
 #include <vector>
 
 #include <Eigen/Core>
+struct CircleGPU;
 using Eigen::Vector2i;
 
 namespace msc
@@ -82,6 +83,8 @@ namespace msc
 
 		// Display back buffer, optionally request vertical synchronisation
 		void Present(bool vSync = false);
+
+		void Render(const CircleGPU* data, uint32_t count);
 
 
 		//-------------------------------------------------------------------------------------------------
@@ -166,9 +169,9 @@ namespace msc
 		//-------------------------------------------------------------------------------------------------
 	private:
 		// Only one set of shaders used here - for drawing sprites
-		std::unique_ptr<ShaderDX> mSpriteVS;
-		std::unique_ptr<ShaderDX> mSpriteGS;
-		std::unique_ptr<ShaderDX> mSpritePS;
+		std::unique_ptr<ShaderDX> mCircleVS;
+		std::unique_ptr<ShaderDX> mCircleGS;
+		std::unique_ptr<ShaderDX> mCirclePS;
 
 		// Vertex layout - describes the data structure that will be passed to the vertex shader. In this
 		// app we always pass SpriteRenderData structs (see sprite_set.h), so only one layout is needed
@@ -199,6 +202,9 @@ namespace msc
 		} mPerSpriteSetCBStruct;
 
 		CComPtr<ID3D11Buffer> mPerSpriteSetCB;
+
+		// Vertex buffer for circle sprites - created once and re-used every frame, updated with new data every frame
+		CComPtr<ID3D11Buffer> mCirclesVertexBuffer; 
 	};
 } // namespaces
 

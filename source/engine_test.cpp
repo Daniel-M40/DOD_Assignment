@@ -1,6 +1,5 @@
 // Implements EngineTest, a class to test the sprite engine API
 #include "engine_test.h"
-#include <math.h>
 #include <sdl.h>
 #include "sim_config.h"
 #include "utility.h"
@@ -8,8 +7,6 @@
 
 namespace msc
 {
-	SimConfig config = {};
-
 	// Constructor initialises SDL to receive input/window events and also creates a (hidden) window
 	EngineTest::EngineTest() : mSDL(SDL_INIT_EVENTS), mWindow("DOD Assignment", false)
 	{
@@ -25,7 +22,7 @@ namespace msc
 	// Load and pre-process game resources. Returns true on success
 	bool EngineTest::SceneSetup()
 	{
-		mActiveCount = config.numCircles;
+		mActiveCount = SimConfig::NUM_CIRCLES;
 
 		mPosX.resize(mActiveCount);
 		mPosY.resize(mActiveCount);
@@ -37,11 +34,12 @@ namespace msc
 		mColB.resize(mActiveCount);
 		mHP.resize(mActiveCount);
 		mNames.resize(mActiveCount);
+		gpuData.resize(mActiveCount);
 
-		float worldX = config.worldSize.x();
-		float worldY = config.worldSize.y();
-		float minVel = config.maxVelocity.x();
-		float maxVel = config.maxVelocity.y();
+		float worldX = static_cast<float>(SimConfig::WORLD_SIZE_X);
+		float worldY = static_cast<float>(SimConfig::WORLD_SIZE_Y);
+		float minVel = -SimConfig::MAX_VELOCITY;
+		float maxVel = SimConfig::MAX_VELOCITY;
 
 		for (uint32_t i = 0; i < mActiveCount; ++i)
 		{
@@ -77,7 +75,19 @@ namespace msc
 	// Render scene to current render target
 	void EngineTest::SceneRender()
 	{
-		mEngine->Render();
+		
+		for (uint32_t i = 0; i < mActiveCount; ++i)
+		{
+			gpuData[i].posX = mPosX[i];
+			gpuData[i].posY = mPosY[i];
+			gpuData[i].posZ = 0.5f;
+			gpuData[i].radius = mRadii[i];
+			gpuData[i].colR = mColR[i];
+			gpuData[i].colG = mColG[i];
+			gpuData[i].colB = mColB[i];
+			gpuData[i].padding = 0.0f;
+		}
+		mEngine->Render(gpuData.data(), mActiveCount);
 	}
 
 	//---------------------------------------------------------------------------------------------------------------------
@@ -94,6 +104,9 @@ namespace msc
 		{
 			return EXIT_FAILURE;
 		}
+
+		mEngine->SetRenderMode(RenderMode::Cutout);
+
 
 		mTimer.Reset();
 		mTimer.Start();

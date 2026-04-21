@@ -5,7 +5,9 @@
 #include <stdexcept>
 #include "shader_dx.h"
 #include "utility_dx.h"
+#include "../circle_gpu.h"
 #include "../platform/window.h"
+#include "../sim_config.h"
 
 #ifdef _DEBUG
 #include <initguid.h>
@@ -349,38 +351,31 @@ namespace msc
 	// passed to the vertex shader. In a change from previous year's material the "semantics" are now
 	// simply the variable names (index is only needed when the semantic/variable name ends in numbers)
 	// Slot, Slot Class and Instance Step are not needed here and are just set to the defaults
-	D3D11_INPUT_ELEMENT_DESC SpriteRenderDataLayout[] =
+	D3D11_INPUT_ELEMENT_DESC CircleDataLayout[] =
 	{
 		// Semantic     Index  Format                        Slot  Offset  Slot Class                    Instance Step
-		{"position", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
-		{"rotation", 0, DXGI_FORMAT_R32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
-		{"scale", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 16, D3D11_INPUT_PER_VERTEX_DATA, 0},
-		{"custom", 1, DXGI_FORMAT_R32_UINT, 0, 24, D3D11_INPUT_PER_VERTEX_DATA, 0},
-		{"custom", 2, DXGI_FORMAT_R32_UINT, 0, 28, D3D11_INPUT_PER_VERTEX_DATA, 0},
-		{"size", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 32, D3D11_INPUT_PER_VERTEX_DATA, 0},
-		{"anchor", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 40, D3D11_INPUT_PER_VERTEX_DATA, 0},
-		{"UV", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 48, D3D11_INPUT_PER_VERTEX_DATA, 0},
-		{"atlasIndex", 0, DXGI_FORMAT_R32_UINT, 0, 56, D3D11_INPUT_PER_VERTEX_DATA, 0},
-		{"custom", 3, DXGI_FORMAT_R32_UINT, 0, 60, D3D11_INPUT_PER_VERTEX_DATA, 0},
+		{"position", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0,  0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+		{"radius",   0, DXGI_FORMAT_R32_FLOAT,       0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
+		{"colour",   0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 16, D3D11_INPUT_PER_VERTEX_DATA, 0},
+		{"padding",  0, DXGI_FORMAT_R32_FLOAT,       0, 28, D3D11_INPUT_PER_VERTEX_DATA, 0},
 	};
-
 
 	// Prepare various pipeline state objects. No flexibility in the engine here, just various hard-coded settings
 	void EngineDX::CreatePipelineStateObjects()
 	{
 		// Only one set of vertex/geometry/pixel shaders used in this app. They convert sprite instances into
 		// textured quads with appropriate UV offsetting into sprite atlas
-		mSpriteVS = std::make_unique<ShaderDX>(mDevice, ShaderType::Vertex, "sprite_vs");
-		mSpriteGS = std::make_unique<ShaderDX>(mDevice, ShaderType::Geometry, "sprite_gs");
-		mSpritePS = std::make_unique<ShaderDX>(mDevice, ShaderType::Pixel, "sprite_ps");
+		mCircleVS = std::make_unique<ShaderDX>(mDevice, ShaderType::Vertex, "circle_vs");
+		mCircleGS = std::make_unique<ShaderDX>(mDevice, ShaderType::Geometry, "circle_gs");
+		mCirclePS = std::make_unique<ShaderDX>(mDevice, ShaderType::Pixel, "circle_ps");
 
 
 		// Create the vertex layout so the vertex shader knows what data to expect. This will convert the
-		// SpriteRenderDataLayout structure above into a DirectX object we use at render time. Need to pass an
-		// "example" vertex shader to validate the layout, which is why mSpriteVS is used
-		mDevice->CreateInputLayout(SpriteRenderDataLayout,
-		                           sizeof(SpriteRenderDataLayout) / sizeof(SpriteRenderDataLayout[0]),
-		                           mSpriteVS->ByteCode(), mSpriteVS->ByteCodeLength(), &mSpriteVertexLayout);
+		// CircleDataLayout structure above into a DirectX object we use at render time. Need to pass an
+		// "example" vertex shader to validate the layout, which is why mCircleVS is used
+		mDevice->CreateInputLayout(CircleDataLayout,
+		                           sizeof(CircleDataLayout) / sizeof(CircleDataLayout[0]),
+		                           mCircleVS->ByteCode(), mCircleVS->ByteCodeLength(), &mSpriteVertexLayout);
 		mContext->IASetInputLayout(mSpriteVertexLayout);
 
 
@@ -442,19 +437,29 @@ namespace msc
 		//       add the .p - only pass one pointer though, use raw pointers if you need an array of several
 
 		// Create constant buffer - for shader data that is only changed once per sprite-set
-		D3D11_BUFFER_DESC constantBufferDesc{}; // Initialise all members to 0
-		constantBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
-		constantBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-		constantBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-		constantBufferDesc.MiscFlags = 0;
-		constantBufferDesc.StructureByteStride = 0;
-		constantBufferDesc.ByteWidth = sizeof(mPerSpriteSetCBStruct);
-		mDevice->CreateBuffer(&constantBufferDesc, nullptr, &mPerSpriteSetCB);
+		D3D11_BUFFER_DESC bufferDesc{}; // Initialise all members to 0
+		bufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+		bufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+		bufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+		bufferDesc.MiscFlags = 0;
+		bufferDesc.StructureByteStride = 0;
+		bufferDesc.ByteWidth = sizeof(mPerSpriteSetCBStruct);
+		mDevice->CreateBuffer(&bufferDesc, nullptr, &mPerSpriteSetCB);
 		mContext->GSSetConstantBuffers(0, 1, &mPerSpriteSetCB.p);
 		// Set constant buffer straight away on geometry shader buffer 0
 
 		// All rendering will be points (converted to quads in the shaders)
 		mContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_POINTLIST);
+
+
+		// Create constant buffer - for shader data that is only changed once per sprite-set
+		bufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+		bufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+		bufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+		bufferDesc.MiscFlags = 0;
+		bufferDesc.StructureByteStride = 0;
+		bufferDesc.ByteWidth = SimConfig::NUM_CIRCLES * sizeof(CircleGPU);
+		mDevice->CreateBuffer(&bufferDesc, nullptr, &mCirclesVertexBuffer);
 	}
 
 
@@ -475,9 +480,9 @@ namespace msc
 	// Select a blending mode for subsequent rendering
 	void EngineDX::SetRenderMode(RenderMode renderMode)
 	{
-		mSpriteVS->Set(mContext);
-		mSpriteGS->Set(mContext);
-		mSpritePS->Set(mContext);
+		mCircleVS->Set(mContext);
+		mCircleGS->Set(mContext);
+		mCirclePS->Set(mContext);
 
 		if (renderMode == RenderMode::Cutout)
 		{
@@ -506,6 +511,39 @@ namespace msc
 	void EngineDX::Present(bool vSync /*= false*/)
 	{
 		mSwapChain->Present((vSync ? 1 : 0), 0);
+	}
+
+	void EngineDX::Render(const CircleGPU* data, uint32_t count)
+	{
+		// Map vertex buffer and copy circle data in
+		D3D11_MAPPED_SUBRESOURCE bufferData;
+		if (FAILED(mContext->Map(mCirclesVertexBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &bufferData)))
+		{
+			return;
+		}
+		memcpy(bufferData.pData, data, count * sizeof(CircleGPU));
+		mContext->Unmap(mCirclesVertexBuffer, 0);
+
+		// Update constant buffer with backbuffer size for GS NDC conversion
+		D3D11_MAPPED_SUBRESOURCE cbData;
+		if (SUCCEEDED(mContext->Map(mPerSpriteSetCB, 0, D3D11_MAP_WRITE_DISCARD, 0, &cbData)))
+		{
+			mPerSpriteSetCBStruct.backbufferSize[0] = static_cast<float>(mBackBufferSize.x());
+			mPerSpriteSetCBStruct.backbufferSize[1] = static_cast<float>(mBackBufferSize.y());
+			memcpy(cbData.pData, &mPerSpriteSetCBStruct, sizeof(mPerSpriteSetCBStruct));
+			mContext->Unmap(mPerSpriteSetCB, 0);
+		}
+
+		// Set shaders
+		mCircleVS->Set(mContext);
+		mCircleGS->Set(mContext);
+		mCirclePS->Set(mContext);
+
+		// Bind vertex buffer and draw
+		UINT vertexSize = sizeof(CircleGPU);
+		UINT offset = 0;
+		mContext->IASetVertexBuffers(0, 1, &mCirclesVertexBuffer.p, &vertexSize, &offset);
+		mContext->Draw(count, 0);
 	}
 
 

@@ -3,8 +3,9 @@
 class SimConfig
 {
 public:
-	int numCircles = 100000;
-	Vector2i worldSize = {1600, 960};
-	Vector2f maxVelocity = {100.0f, 100.0f};
-	float radius = 5.f;
+    static const int NUM_CIRCLES = 100000;
+    static const int WORLD_SIZE_X = 1600;
+    static const int WORLD_SIZE_Y = 960;
+    constexpr static float MAX_VELOCITY = 100.0f;
+    constexpr static float RADIUS = 5.f;
 };
