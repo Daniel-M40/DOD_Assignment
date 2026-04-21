@@ -110,7 +110,7 @@
     <ClInclude Include="source\utility.h">
       <Filter>utility</Filter>
     </ClInclude>
-    <ClInclude Include="source\circle.h">
+    <ClInclude Include="source\circle_gpu.h">
       <Filter>simulation</Filter>
     </ClInclude>
     <ClInclude Include="source\sim_config.h">

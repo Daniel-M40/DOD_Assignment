@@ -5,23 +5,21 @@
 
 #include <stdint.h>
 
-namespace msc {
+namespace msc
+{
+	// Return a float in the range [low, high]
+	float RandomInRange(float low, float high);
 
-// Return a float in the range [low, high]
-float RandomInRange(float low, float high);
+	// Return a int in the range [low, high]. Size of range must be less than RAND_MAX
+	int32_t RandomInRange(int32_t low, int32_t high);
 
-// Return a int in the range [low, high]. Size of range must be less than RAND_MAX
-int32_t RandomInRange(int32_t low, int32_t high);
+	// Given a random event that occurs on average every "avgTime" seconds, return a random time
+	// until the next event
+	float RandomTime(float avgTime);
 
-// Given a random event that occurs on average every "avgTime" seconds, return a random time
-// until the next event
-float RandomTime(float avgTime);
-
-// Conversions
-float ToRadians(float degrees);
-float ToDegrees(float radians);
-
-
+	// Conversions
+	float ToRadians(float degrees);
+	float ToDegrees(float radians);
 } // namespaces
 
 #endif // Header guard

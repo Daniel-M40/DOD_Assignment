@@ -176,7 +176,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="source\sim_config.h" />
-    <ClInclude Include="source\circle.h" />
+    <ClInclude Include="source\circle_gpu.h" />
     <ClInclude Include="source\collision.h" />
     <ClInclude Include="source\engine_test.h" />
     <ClInclude Include="source\particle_system.h" />
