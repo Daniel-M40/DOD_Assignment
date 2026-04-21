@@ -6,7 +6,6 @@
 #include <atlbase.h>
 #include <d3d11.h>
 #include <dxgi.h>
-#include <list>
 #include <memory>
 #include <stdint.h>
 #include <vector>
@@ -199,9 +198,9 @@ namespace msc
 			float backbufferSize[2];
 			// Not using eigen math library types here as they might conflict with packing requrements
 			float atlasSize[2];
-		} mPerSpriteSetCBStruct;
+		} mPerFrameCBStruct;
 
-		CComPtr<ID3D11Buffer> mPerSpriteSetCB;
+		CComPtr<ID3D11Buffer> mPerFrameCB;
 
 		// Vertex buffer for circle sprites - created once and re-used every frame, updated with new data every frame
 		CComPtr<ID3D11Buffer> mCirclesVertexBuffer; 

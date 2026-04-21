@@ -159,10 +159,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="source\collision.cpp" />
     <ClCompile Include="source\engine_test.cpp" />
     <ClCompile Include="source\main.cpp" />
-    <ClCompile Include="source\particle_system.cpp" />
     <ClCompile Include="source\platform\input.cpp" />
     <ClCompile Include="source\platform\sdl_init.cpp" />
     <ClCompile Include="source\platform\timer.cpp" />
@@ -170,16 +168,12 @@
     <ClCompile Include="source\render\engine_dx.cpp" />
     <ClCompile Include="source\render\shader_dx.cpp" />
     <ClCompile Include="source\render\utility_dx.cpp" />
-    <ClCompile Include="source\scroll_plane.cpp" />
-    <ClCompile Include="source\sprite_set.cpp" />
     <ClCompile Include="source\utility.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="source\sim_config.h" />
     <ClInclude Include="source\circle_gpu.h" />
-    <ClInclude Include="source\collision.h" />
     <ClInclude Include="source\engine_test.h" />
-    <ClInclude Include="source\particle_system.h" />
     <ClInclude Include="source\platform\input.h" />
     <ClInclude Include="source\platform\sdl_init.h" />
     <ClInclude Include="source\platform\timer.h" />
@@ -187,9 +181,6 @@
     <ClInclude Include="source\render\engine_dx.h" />
     <ClInclude Include="source\render\shader_dx.h" />
     <ClInclude Include="source\render\utility_dx.h" />
-    <ClInclude Include="source\scroll_plane.h" />
-    <ClInclude Include="source\sprite.h" />
-    <ClInclude Include="source\sprite_set.h" />
     <ClInclude Include="source\utility.h" />
   </ItemGroup>
   <ItemGroup>

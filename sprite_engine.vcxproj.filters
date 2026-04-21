@@ -24,18 +24,6 @@
     <ClCompile Include="source\render\utility_dx.cpp">
       <Filter>render</Filter>
     </ClCompile>
-    <ClCompile Include="source\particle_system.cpp">
-      <Filter>particle system</Filter>
-    </ClCompile>
-    <ClCompile Include="source\collision.cpp">
-      <Filter>sprites</Filter>
-    </ClCompile>
-    <ClCompile Include="source\scroll_plane.cpp">
-      <Filter>sprites</Filter>
-    </ClCompile>
-    <ClCompile Include="source\sprite_set.cpp">
-      <Filter>sprites</Filter>
-    </ClCompile>
     <ClCompile Include="source\utility.cpp">
       <Filter>utility</Filter>
     </ClCompile>
@@ -91,21 +79,6 @@
     </ClInclude>
     <ClInclude Include="source\render\utility_dx.h">
       <Filter>render</Filter>
-    </ClInclude>
-    <ClInclude Include="source\particle_system.h">
-      <Filter>particle system</Filter>
-    </ClInclude>
-    <ClInclude Include="source\collision.h">
-      <Filter>sprites</Filter>
-    </ClInclude>
-    <ClInclude Include="source\scroll_plane.h">
-      <Filter>sprites</Filter>
-    </ClInclude>
-    <ClInclude Include="source\sprite.h">
-      <Filter>sprites</Filter>
-    </ClInclude>
-    <ClInclude Include="source\sprite_set.h">
-      <Filter>sprites</Filter>
     </ClInclude>
     <ClInclude Include="source\utility.h">
       <Filter>utility</Filter>

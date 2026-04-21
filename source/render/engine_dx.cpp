@@ -443,9 +443,9 @@ namespace msc
 		bufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 		bufferDesc.MiscFlags = 0;
 		bufferDesc.StructureByteStride = 0;
-		bufferDesc.ByteWidth = sizeof(mPerSpriteSetCBStruct);
-		mDevice->CreateBuffer(&bufferDesc, nullptr, &mPerSpriteSetCB);
-		mContext->GSSetConstantBuffers(0, 1, &mPerSpriteSetCB.p);
+		bufferDesc.ByteWidth = sizeof(mPerFrameCBStruct);
+		mDevice->CreateBuffer(&bufferDesc, nullptr, &mPerFrameCB);
+		mContext->GSSetConstantBuffers(0, 1, &mPerFrameCB.p);
 		// Set constant buffer straight away on geometry shader buffer 0
 
 		// All rendering will be points (converted to quads in the shaders)
@@ -526,12 +526,12 @@ namespace msc
 
 		// Update constant buffer with backbuffer size for GS NDC conversion
 		D3D11_MAPPED_SUBRESOURCE cbData;
-		if (SUCCEEDED(mContext->Map(mPerSpriteSetCB, 0, D3D11_MAP_WRITE_DISCARD, 0, &cbData)))
+		if (SUCCEEDED(mContext->Map(mPerFrameCB, 0, D3D11_MAP_WRITE_DISCARD, 0, &cbData)))
 		{
-			mPerSpriteSetCBStruct.backbufferSize[0] = static_cast<float>(mBackBufferSize.x());
-			mPerSpriteSetCBStruct.backbufferSize[1] = static_cast<float>(mBackBufferSize.y());
-			memcpy(cbData.pData, &mPerSpriteSetCBStruct, sizeof(mPerSpriteSetCBStruct));
-			mContext->Unmap(mPerSpriteSetCB, 0);
+			mPerFrameCBStruct.backbufferSize[0] = static_cast<float>(mBackBufferSize.x());
+			mPerFrameCBStruct.backbufferSize[1] = static_cast<float>(mBackBufferSize.y());
+			memcpy(cbData.pData, &mPerFrameCBStruct, sizeof(mPerFrameCBStruct));
+			mContext->Unmap(mPerFrameCB, 0);
 		}
 
 		// Set shaders

@@ -3,10 +3,7 @@
 #ifndef MSC_ENGINE_TEST_H_INCLUDED
 #define MSC_ENGINE_TEST_H_INCLUDED
 
-#include <list>
 #include <sdl.h>
-#include <stdint.h>
-#include "particle_system.h"
 #include "platform/input.h"
 #include "platform/sdl_init.h"
 #include "platform/timer.h"
