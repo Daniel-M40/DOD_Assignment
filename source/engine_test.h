@@ -93,7 +93,8 @@ namespace msc
 		platform::SDL mSDL;
 		platform::Window mWindow;
 
-		std::vector<CircleGPU> gpuData;
+		std::vector<CircleGPU> gpuCircleData;
+		std::vector<CircleGPU> gpuNodeData;
 		std::unique_ptr<EngineDX> mEngine;
 		Vector2i mWindowSize;
 #endif
@@ -126,6 +127,9 @@ namespace msc
 		std::vector<float>		mNodePosY;
 		std::vector<float>		mNodeVelX;
 		std::vector<float>		mNodeVelY;
+		std::vector<float>		mNodeColR;
+		std::vector<float>		mNodeColG;
+		std::vector<float>		mNodeColB;
 		std::vector<float>		mNodeRadii;
 		std::vector<ENodeType>	mNodeType;
 		std::vector<float>		mNodePeriod;

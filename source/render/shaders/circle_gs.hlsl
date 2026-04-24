@@ -17,6 +17,7 @@ struct PSInput
     float4 position : SV_Position;
     float2 uv : UV;
     float3 colour : COLOUR;
+    float isNode : ISNODE;
 };
 
 [maxvertexcount(4)]
@@ -34,6 +35,7 @@ void main(point GSInput input[1], inout TriangleStream<PSInput> output)
     outVertex.position.z = input[0].position.z;
     outVertex.position.w = 1.0f;
     outVertex.colour = input[0].colour;
+    outVertex.isNode = input[0].pad;
 
     // Top-left
     outVertex.position.xy = centre + float2(-NDCSize.x, NDCSize.y) * 0.5f;

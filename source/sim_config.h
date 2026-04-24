@@ -14,6 +14,8 @@ public:
     static const int WORLD_SIZE_X = 1600;
     static const int WORLD_SIZE_Y = 960;
 
+    constexpr static bool ENABLE_WALLS = true;
+
     //---------------------------------
     // CIRCLE CONFIG
     //---------------------------------
@@ -28,8 +30,8 @@ public:
     constexpr static float NODE_MIN_TIME = 1.f;
     constexpr static float NODE_MAX_TIME = 5.f;
 
-    constexpr static float ATTRACTOR_NODE_STRENGTH = 5.f;
-    constexpr static float IMPLUSE_NODE_STRENGTH = 5.f;
+    constexpr static float ATTRACTOR_NODE_STRENGTH = 15000.f;
+    constexpr static float IMPULSE_NODE_STRENGTH = 15000.f;
 
     constexpr static bool MOVING_NODES = false;
 };

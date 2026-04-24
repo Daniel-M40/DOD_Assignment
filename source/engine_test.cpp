@@ -35,7 +35,7 @@ namespace msc
 	bool EngineTest::SceneSetup()
 	{
 		mActiveCount = SimConfig::NUM_CIRCLES;
-		mNodeActiveCount = SimConfig::NUM_CIRCLES / 20;
+		mNodeActiveCount = SimConfig::NUM_CIRCLES / 2000;
 
 		mPosX.resize(mActiveCount);
 		mPosY.resize(mActiveCount);
@@ -53,12 +53,16 @@ namespace msc
 		mNodeVelX.resize(mNodeActiveCount);
 		mNodeVelY.resize(mNodeActiveCount);
 		mNodeRadii.resize(mNodeActiveCount);
+		mNodeColR.resize(mNodeActiveCount);
+		mNodeColG.resize(mNodeActiveCount);
+		mNodeColB.resize(mNodeActiveCount);
 		mNodeType.resize(mNodeActiveCount);
 		mNodePeriod.resize(mNodeActiveCount);
 		mNodeTimer.resize(mNodeActiveCount);
 
 #ifdef VISUALISATION_ENABLED
-		gpuData.resize(mActiveCount);
+		gpuCircleData.resize(mActiveCount);
+		gpuNodeData.resize(mNodeActiveCount);
 #endif
 
 		float worldX = static_cast<float>(SimConfig::WORLD_SIZE_X);
@@ -95,6 +99,10 @@ namespace msc
 			mNodeType[i] = static_cast<ENodeType>(RandomInRange(0, 1));
 			mNodePeriod[i] = RandomInRange(SimConfig::NODE_MIN_TIME, SimConfig::NODE_MAX_TIME);
 			mNodeTimer[i] = RandomInRange(0.f, mNodePeriod[i]);
+
+			mNodeColR[i] = (mNodeType[i] == ENodeType::Attractor) ? 0.0f : 1.0f;
+			mNodeColG[i] = (mNodeType[i] == ENodeType::Attractor) ? 1.0f : 0.0f;
+			mNodeColB[i] = (mNodeType[i] == ENodeType::Attractor) ? 0.0f : 0.0f;
 		}
 
 
@@ -108,14 +116,17 @@ namespace msc
 	{
 		for (uint32_t i = 0; i < mActiveCount; ++i)
 		{
-			if (mPosX[i] >= SimConfig::WORLD_SIZE_X || mPosX[i] <= -SimConfig::WORLD_SIZE_X)
+			if (SimConfig::ENABLE_WALLS)
 			{
-				mVelX[i] = -mVelX[i];
-			}
+				if (mPosX[i] >= SimConfig::WORLD_SIZE_X || mPosX[i] <= -SimConfig::WORLD_SIZE_X)
+				{
+					mVelX[i] = -mVelX[i];
+				}
 
-			if (mPosY[i] >= SimConfig::WORLD_SIZE_Y || mPosY[i] <= -SimConfig::WORLD_SIZE_Y)
-			{
-				mVelY[i] = -mVelY[i];
+				if (mPosY[i] >= SimConfig::WORLD_SIZE_Y || mPosY[i] <= -SimConfig::WORLD_SIZE_Y)
+				{
+					mVelY[i] = -mVelY[i];
+				}
 			}
 
 			mPosX[i] += mVelX[i] * mFrameTime;
@@ -143,7 +154,7 @@ namespace msc
 					{
 						float dist = sqrt(distSqrd);
 						float sign = (mNodeType[i] == ENodeType::Attractor) ? -1.0f : 1.0f;
-						float strength = sign * SimConfig::IMPLUSE_NODE_STRENGTH / dist;
+						float strength = sign * SimConfig::IMPULSE_NODE_STRENGTH / dist;
 
 						mVelX[j] += (dx / dist) * strength;
 						mVelY[j] += (dy / dist) * strength;
@@ -179,19 +190,34 @@ namespace msc
 	void EngineTest::SceneRender()
 	{
 		#ifdef VISUALISATION_ENABLED
-		
+
+		//CIRCLE RENDER PASS
 		for (uint32_t i = 0; i < mActiveCount; ++i)
 		{
-			gpuData[i].posX = mPosX[i];
-			gpuData[i].posY = mPosY[i];
-			gpuData[i].posZ = 0.5f;
-			gpuData[i].radius = mRadii[i];
-			gpuData[i].colR = mColR[i];
-			gpuData[i].colG = mColG[i];
-			gpuData[i].colB = mColB[i];
-			gpuData[i].padding = 0.0f;
+			gpuCircleData[i].posX = mPosX[i];
+			gpuCircleData[i].posY = mPosY[i];
+			gpuCircleData[i].posZ = 0.5f;
+			gpuCircleData[i].radius = mRadii[i];
+			gpuCircleData[i].colR = mColR[i];
+			gpuCircleData[i].colG = mColG[i];
+			gpuCircleData[i].colB = mColB[i];
+			gpuCircleData[i].padding = 0.0f;
 		}
-		mEngine->Render(gpuData.data(), mActiveCount);
+		mEngine->Render(gpuCircleData.data(), mActiveCount);
+
+		//NODE RENDER PASS
+		for (uint32_t i = 0; i < mNodeActiveCount; ++i)
+		{
+			gpuNodeData[i].posX = mNodePosX[i];
+			gpuNodeData[i].posY = mNodePosY[i];
+			gpuNodeData[i].posZ = 0.5f;
+			gpuNodeData[i].radius = mNodeRadii[i];
+			gpuNodeData[i].colR = mNodeColR[i];
+			gpuNodeData[i].colG = mNodeColG[i];
+			gpuNodeData[i].colB = mNodeColB[i];
+			gpuNodeData[i].padding = 1.0f;
+		}
+		mEngine->Render(gpuNodeData.data(), mNodeActiveCount);
 
 		#endif
 	}
