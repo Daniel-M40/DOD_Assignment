@@ -12,6 +12,8 @@
 #include "platform/window.h"
 
 #include <Eigen/Core>
+
+#include "thread_pool.h"
 using Eigen::Vector2f;
 using Eigen::Vector2i;
 
@@ -102,9 +104,17 @@ namespace msc
 		platform::Input mInput;
 		platform::Timer mTimer;
 
-		//---------------------------------------------------------------------------------------------------------------------
+		//-----------------------------------------------------
+		// Thread Pool
+		//-----------------------------------------------------
+		#ifdef THREAD_POOL_ENABLED
+		ThreadPool mThreadPool;
+		int mNumThreads = std::thread::hardware_concurrency();
+		#endif
+
+		//-----------------------------------------------------
 		// Game Data
-		//---------------------------------------------------------------------------------------------------------------------
+		//-----------------------------------------------------
 
 		// Circle SoA data
 		std::vector<float>			mPosX;
@@ -119,8 +129,6 @@ namespace msc
 		std::vector<std::string>	mNames;
 		uint32_t					mActiveCount = 0;
 		uint32_t					mNodeActiveCount = 0;
-
-
 
 		// Nodes SoA data
 		std::vector<float>		mNodePosX;
@@ -142,6 +150,9 @@ namespace msc
 		float mAverageFrameTime				= 0.01f;	// Average frame time (over recent frames)
 		float mAverageFPS					= 1 / mAverageFrameTime;
 		const float mFPSUpdateTime = 0.5f;
+
+
+		void UpdateCircles(uint32_t start, uint32_t end);
 	};
 } // namespaces
 

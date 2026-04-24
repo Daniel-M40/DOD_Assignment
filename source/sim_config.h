@@ -1,7 +1,8 @@
 #pragma once
 
 
-#define VISUALISATION_ENABLED
+//#define VISUALISATION_ENABLED
+//#define THREAD_POOL_ENABLED
 
 class SimConfig
 {
@@ -10,7 +11,7 @@ public:
     //---------------------------------
     // WORLD CONFIG
     //---------------------------------
-	static const int NUM_CIRCLES = 100000;
+	static const int NUM_CIRCLES = 2500000;
     static const int WORLD_SIZE_X = 1600;
     static const int WORLD_SIZE_Y = 960;
 

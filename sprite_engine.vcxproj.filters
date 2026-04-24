@@ -27,6 +27,7 @@
     <ClCompile Include="source\utility.cpp">
       <Filter>utility</Filter>
     </ClCompile>
+    <ClCompile Include="source\thread_pool.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="platform">
@@ -89,6 +90,7 @@
     <ClInclude Include="source\sim_config.h">
       <Filter>simulation</Filter>
     </ClInclude>
+    <ClInclude Include="source\thread_pool.h" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="references\SDL2.ref">

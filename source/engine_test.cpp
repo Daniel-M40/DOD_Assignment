@@ -9,6 +9,7 @@
 
 namespace msc
 {
+
 	// Constructor initialises SDL to receive input/window events and also creates a (hidden) window
 #ifdef VISUALISATION_ENABLED
 	EngineTest::EngineTest() : mSDL(SDL_INIT_EVENTS), mWindow("DOD Assignment", false)
@@ -23,13 +24,12 @@ namespace msc
 	}
 #endif
 
-
-
 	EngineTest::~EngineTest()
 	{
 	}
 
-	//---------------------------------------------------------------------------------------------------------------------
+
+	#pragma region Scene Lifecycle
 
 	// Load and pre-process game resources. Returns true on success
 	bool EngineTest::SceneSetup()
@@ -109,11 +109,23 @@ namespace msc
 		return true;
 	}
 
-	//---------------------------------------------------------------------------------------------------------------------
-
 	// Main scene update code. Called every frame, uses mFrameTime member for timing
 	void EngineTest::SceneUpdate()
 	{
+		#ifdef THREAD_POOL_ENABLED
+
+		uint32_t chunk = mActiveCount / mNumThreads;
+		for (int t = 0; t < mNumThreads; ++t)
+		{
+			uint32_t start = t * chunk;
+			uint32_t end = (t == mNumThreads - 1) ? mActiveCount : start + chunk;
+			mThreadPool.Submit([this, start, end] { UpdateCircles(start, end); });
+		}
+
+		mThreadPool.WaitAll();
+
+		#else
+
 		for (uint32_t i = 0; i < mActiveCount; ++i)
 		{
 			if (SimConfig::ENABLE_WALLS)
@@ -132,6 +144,11 @@ namespace msc
 			mPosX[i] += mVelX[i] * mFrameTime;
 			mPosY[i] += mVelY[i] * mFrameTime;
 		}
+
+		#endif
+
+
+
 
 		for (uint32_t i = 0; i < mNodeActiveCount; ++i)
 		{
@@ -163,28 +180,14 @@ namespace msc
 #ifdef VISUALISATION_ENABLED
 #else
 						float simTime = mTimer.GetTime();
-						std::cout << "Time: " << simTime << "s | " << mNames[j] << " | HP: " << mHP[j] << std::endl;
+						//std::cout << "Time: " << simTime << "s | " << mNames[j] << " | HP: " << mHP[j] << std::endl;
 #endif
 
 					}
 				}
-
-
-				// Node should get all circles within its radius and pull them towards its position
-				if (mNodeType[i] == ENodeType::Attractor)
-				{
-					
-				}
-				// Node should get all circles within its radius and push them away from its position
-				else if (mNodeType[i] == ENodeType::Repulsor)
-				{
-
-				}
 			}
 		}
 	}
-
-	//---------------------------------------------------------------------------------------------------------------------
 
 	// Render scene to current render target
 	void EngineTest::SceneRender()
@@ -221,8 +224,6 @@ namespace msc
 
 		#endif
 	}
-
-	//---------------------------------------------------------------------------------------------------------------------
 
 	int EngineTest::Run()
 	{
@@ -276,7 +277,35 @@ namespace msc
 		return EXIT_SUCCESS;
 	}
 
-	//---------------------------------------------------------------------------------------------------------------------
+	#pragma endregion
+
+	#pragma region Circle and Node Update
+
+	void EngineTest::UpdateCircles(uint32_t start, uint32_t end)
+	{
+		for (uint32_t i = start; i < end; ++i)
+		{
+			if (SimConfig::ENABLE_WALLS)
+			{
+				if (mPosX[i] >= SimConfig::WORLD_SIZE_X || mPosX[i] <= -SimConfig::WORLD_SIZE_X)
+				{
+					mVelX[i] = -mVelX[i];
+				}
+
+				if (mPosY[i] >= SimConfig::WORLD_SIZE_Y || mPosY[i] <= -SimConfig::WORLD_SIZE_Y)
+				{
+					mVelY[i] = -mVelY[i];
+				}
+			}
+
+			mPosX[i] += mVelX[i] * mFrameTime;
+			mPosY[i] += mVelY[i] * mFrameTime;
+		}
+	}
+
+	#pragma endregion
+
+	#pragma region Event Handling
 
 	void EngineTest::UpdateFrameTime()
 	{
@@ -329,4 +358,7 @@ namespace msc
 	{
 		return 1;
 	}
+
+	#pragma endregion
+
 } // namespaces
