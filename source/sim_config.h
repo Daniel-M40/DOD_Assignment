@@ -1,11 +1,10 @@
 #pragma once
 
 
-#define VISUALISATION_ENABLED
+//#define VISUALISATION_ENABLED
 #define THREAD_POOL_ENABLED
 #define SPATIAL_HASH_ENABLED
-
-#define ENABLE_3D
+//#define ENABLE_3D
 
 class SimConfig
 {
@@ -14,7 +13,7 @@ public:
     //---------------------------------
     // WORLD CONFIG
     //---------------------------------
-	static const int NUM_CIRCLES = 2000;
+	static const int NUM_CIRCLES = 50000;
     static const int WORLD_SIZE_X = 1600;
     static const int WORLD_SIZE_Y = 960;
     static const int WORLD_SIZE_Z = 960;
@@ -29,7 +28,7 @@ public:
     // CIRCLE CONFIG
     //---------------------------------
 	constexpr static float CIRCLE_MAX_VELOCITY = 100.0f;
-    constexpr static float CIRCLE_RADIUS = 10.f;
+    constexpr static float CIRCLE_RADIUS = 5.f;
     constexpr static float CIRCLE_MAX_HEALTH = 20.f;
 
     constexpr static bool CIRCLE_DEATH_ENABLED = true;

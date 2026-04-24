@@ -1,7 +1,8 @@
 cbuffer PerFrame : register(b0)
 {
     float2 backbufferSize;
-    float2 padding;
+    float is3D;
+    float padding;
 };
 
 struct GSInput

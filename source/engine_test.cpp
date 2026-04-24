@@ -165,7 +165,12 @@ namespace msc
 
 		for (size_t i = 0; i < mActiveCount; i++)
 		{
+#ifdef ENABLE_3D
 			mSpatialHash.Insert(mPosX[i], mPosY[i], mPosZ[i], i);
+#else
+			mSpatialHash.Insert(mPosX[i], mPosY[i], i);
+#endif
+
 		}
 
 		#endif
@@ -183,11 +188,19 @@ namespace msc
 				float radiusSqrd = mNodeRadii[i] * mNodeRadii[i];
 
 				#ifdef SPATIAL_HASH_ENABLED
+
+#ifdef ENABLE_3D
+
 				mSpatialHash.Query(mNodePosX[i], mNodePosY[i], mNodePosZ[i], mNodeRadii[i], [&](uint32_t j)
 				{
 					NodeActionResolution(i, j, radiusSqrd);
 				});
-
+#else
+				mSpatialHash.Query(mNodePosX[i], mNodePosY[i], mNodeRadii[i], [&](uint32_t j)
+					{
+						NodeActionResolution(i, j, radiusSqrd);
+					});
+				#endif
 				#else
 
 				for (uint32_t j = 0; j < mActiveCount; ++j)
@@ -256,7 +269,7 @@ namespace msc
 #ifdef ENABLE_3D
 					gpuCircleData[i].posZ = (mPosZ[i] + SimConfig::WORLD_SIZE_Z) / (SimConfig::WORLD_SIZE_Z * 2.0f);
 #else
-					gpuCircleData[i].posZ = 0.5f;
+					gpuCircleData[i].posZ = 0.1f;
 #endif
 
 					gpuCircleData[i].radius = mRadii[i];
@@ -279,7 +292,7 @@ namespace msc
 #ifdef ENABLE_3D
 			gpuCircleData[i].posZ = (mPosZ[i] + SimConfig::WORLD_SIZE_Z) / (SimConfig::WORLD_SIZE_Z * 2.0f);
 #else
-			gpuCircleData[i].posZ = 0.5f;
+			gpuCircleData[i].posZ = 0.1f;
 #endif
 
 			gpuCircleData[i].radius = mRadii[i];
@@ -300,7 +313,7 @@ namespace msc
 #ifdef ENABLE_3D
 			gpuNodeData[i].posZ = (mNodePosZ[i] + SimConfig::WORLD_SIZE_Z) / (SimConfig::WORLD_SIZE_Z * 2.0f);
 #else
-			gpuNodeData[i].posZ = 0.5f;
+			gpuNodeData[i].posZ = 0.1f;
 #endif
 			gpuNodeData[i].radius = mNodeRadii[i];
 			gpuNodeData[i].colR = mNodeColR[i];

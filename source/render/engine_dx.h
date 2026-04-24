@@ -196,7 +196,7 @@ namespace msc
 		struct
 		{
 			float backbufferSize[2];
-			// Not using eigen math library types here as they might conflict with packing requrements
+			float is3D;
 			float atlasSize[2];
 		} mPerFrameCBStruct;
 

@@ -116,12 +116,19 @@ namespace msc
 		//-----------------------------------------------------
 		// Spatial Hash
 		//-----------------------------------------------------
-		#ifdef SPATIAL_HASH_ENABLED
+#ifdef SPATIAL_HASH_ENABLED
+#ifdef ENABLE_3D
 		SpatialHash mSpatialHash = SpatialHash(SimConfig::CELL_SIZE, 
 			static_cast<float>(SimConfig::WORLD_SIZE_X), 
 			static_cast<float>(SimConfig::WORLD_SIZE_Y),
 			static_cast<float>(SimConfig::WORLD_SIZE_Z));
-		#endif
+#else
+		SpatialHash mSpatialHash = SpatialHash(SimConfig::CELL_SIZE,
+			static_cast<float>(SimConfig::WORLD_SIZE_X),
+			static_cast<float>(SimConfig::WORLD_SIZE_Y));
+#endif
+
+#endif
 
 		//-----------------------------------------------------
 		// Game Data

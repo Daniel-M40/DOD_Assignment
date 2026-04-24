@@ -446,6 +446,7 @@ namespace msc
 		bufferDesc.ByteWidth = sizeof(mPerFrameCBStruct);
 		mDevice->CreateBuffer(&bufferDesc, nullptr, &mPerFrameCB);
 		mContext->GSSetConstantBuffers(0, 1, &mPerFrameCB.p);
+		mContext->PSSetConstantBuffers(0, 1, &mPerFrameCB.p);
 		// Set constant buffer straight away on geometry shader buffer 0
 
 		// All rendering will be points (converted to quads in the shaders)
@@ -530,6 +531,13 @@ namespace msc
 		{
 			mPerFrameCBStruct.backbufferSize[0] = static_cast<float>(mBackBufferSize.x());
 			mPerFrameCBStruct.backbufferSize[1] = static_cast<float>(mBackBufferSize.y());
+
+#ifdef ENABLE_3D
+			mPerFrameCBStruct.is3D = 1.0f;
+#else
+			mPerFrameCBStruct.is3D = 0.0f;
+#endif
+
 			memcpy(cbData.pData, &mPerFrameCBStruct, sizeof(mPerFrameCBStruct));
 			mContext->Unmap(mPerFrameCB, 0);
 		}
