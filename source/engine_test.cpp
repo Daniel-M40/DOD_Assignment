@@ -194,6 +194,31 @@ namespace msc
 		#ifdef VISUALISATION_ENABLED
 
 		//CIRCLE RENDER PASS
+#ifdef THREAD_POOL_ENABLED
+		uint32_t chunk = mActiveCount / mNumThreads;
+
+		for (int t = 0; t < mNumThreads; ++t)
+		{
+			uint32_t start = t * chunk;
+			uint32_t end = (t == mNumThreads - 1) ? mActiveCount : start + chunk;
+			mThreadPool.Submit([this, start, end]
+			{
+				for (uint32_t i = start; i < end; ++i)
+				{
+					gpuCircleData[i].posX = mPosX[i];
+					gpuCircleData[i].posY = mPosY[i];
+					gpuCircleData[i].posZ = 0.5f;
+					gpuCircleData[i].radius = mRadii[i];
+					gpuCircleData[i].colR = mColR[i];
+					gpuCircleData[i].colG = mColG[i];
+					gpuCircleData[i].colB = mColB[i];
+					gpuCircleData[i].padding = 0.0f;
+				}
+			});
+		}
+
+		mThreadPool.WaitAll();
+#else
 		for (uint32_t i = 0; i < mActiveCount; ++i)
 		{
 			gpuCircleData[i].posX = mPosX[i];
@@ -205,6 +230,8 @@ namespace msc
 			gpuCircleData[i].colB = mColB[i];
 			gpuCircleData[i].padding = 0.0f;
 		}
+#endif
+
 		mEngine->Render(gpuCircleData.data(), mActiveCount);
 
 		//NODE RENDER PASS
