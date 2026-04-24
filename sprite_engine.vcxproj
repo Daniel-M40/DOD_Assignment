@@ -170,7 +170,6 @@
     <ClCompile Include="source\render\utility_dx.cpp" />
     <ClCompile Include="source\utility.cpp" />
     <ClCompile Include="source\thread_pool.cpp" />
-    <ClCompile Include="source\spatial_hash.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="source\sim_config.h" />
