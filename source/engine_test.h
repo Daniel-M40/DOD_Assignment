@@ -181,6 +181,7 @@ namespace msc
 
 		void UpdateCircles(uint32_t start, uint32_t end);
 		void NodeActionResolution(uint32_t nodeIndex, uint32_t circleIndex, float radiusSqrd);
+		void CircleCollisionResolution(uint32_t i, uint32_t j);
 	};
 } // namespaces
 

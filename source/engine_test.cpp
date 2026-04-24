@@ -189,13 +189,14 @@ namespace msc
 
 				#ifdef SPATIAL_HASH_ENABLED
 
-#ifdef ENABLE_3D
+				#ifdef ENABLE_3D
 
 				mSpatialHash.Query(mNodePosX[i], mNodePosY[i], mNodePosZ[i], mNodeRadii[i], [&](uint32_t j)
 				{
 					NodeActionResolution(i, j, radiusSqrd);
 				});
-#else
+				#else
+
 				mSpatialHash.Query(mNodePosX[i], mNodePosY[i], mNodeRadii[i], [&](uint32_t j)
 					{
 						NodeActionResolution(i, j, radiusSqrd);
@@ -209,6 +210,33 @@ namespace msc
 				}
 
 				#endif
+			}
+		}
+
+		if (SimConfig::CIRCLE_COLLISION_ENABLED)
+		{
+			for (uint32_t i = 0; i < mActiveCount; ++i)
+			{
+				float searchRadius = mRadii[i] * 2.0f;
+
+#ifdef SPATIAL_HASH_ENABLED
+
+#ifdef ENABLE_3D
+				mSpatialHash.Query(mPosX[i], mPosY[i], mPosZ[i], searchRadius, [&](uint32_t j)
+#else
+				mSpatialHash.Query(mPosX[i], mPosY[i], searchRadius, [&](uint32_t j)
+#endif
+					{
+						if (j <= i) return;
+						CircleCollisionResolution(i, j);
+					});
+
+#else
+				for (uint32_t j = i + 1; j < mActiveCount; ++j)
+				{
+					CircleCollisionResolution(i, j);
+				}
+#endif
 			}
 		}
 
@@ -454,6 +482,68 @@ namespace msc
 			//std::cout << "Time: " << simTime << "s | " << mNames[circleIndex] << " | HP: " << mHP[circleIndex] << std::endl;
 #endif
 
+		}
+	}
+
+
+	void EngineTest::CircleCollisionResolution(uint32_t i, uint32_t j)
+	{
+		float dx = mPosX[j] - mPosX[i];
+		float dy = mPosY[j] - mPosY[i];
+
+#ifdef ENABLE_3D
+		float dz = mPosZ[j] - mPosZ[i];
+		float distSqrd = dx * dx + dy * dy + dz * dz;
+#else
+		float distSqrd = dx * dx + dy * dy;
+#endif
+
+		float sumRadii = mRadii[i] + mRadii[j];
+		float sumRadiiSqrd = sumRadii * sumRadii;
+
+		if (distSqrd < sumRadiiSqrd && distSqrd > 0.0001f)
+		{
+			float dist = sqrt(distSqrd);
+			float invDist = 1.0f / dist;
+			float overlap = sumRadii - dist;
+
+			// Normalised collision axis
+			float nx = dx * invDist;
+			float ny = dy * invDist;
+
+			// Push apart by half overlap each
+			float halfOverlap = overlap * 0.5f;
+			mPosX[i] -= nx * halfOverlap;
+			mPosY[i] -= ny * halfOverlap;
+			mPosX[j] += nx * halfOverlap;
+			mPosY[j] += ny * halfOverlap;
+
+#ifdef ENABLE_3D
+			float nz = dz * invDist;
+			mPosZ[i] -= nz * halfOverlap;
+			mPosZ[j] += nz * halfOverlap;
+#endif
+
+			// Relative velocity j minus i
+			float relVelN = (mVelX[j] - mVelX[i]) * nx + (mVelY[j] - mVelY[i]) * ny;
+
+#ifdef ENABLE_3D
+			relVelN += (mVelZ[j] - mVelZ[i]) * nz;
+#endif
+
+			// Only resolve if approaching
+			if (relVelN < 0.0f)
+			{
+				mVelX[i] += relVelN * nx;
+				mVelY[i] += relVelN * ny;
+				mVelX[j] -= relVelN * nx;
+				mVelY[j] -= relVelN * ny;
+
+#ifdef ENABLE_3D
+				mVelZ[i] += relVelN * nz;
+				mVelZ[j] -= relVelN * nz;
+#endif
+			}
 		}
 	}
 
