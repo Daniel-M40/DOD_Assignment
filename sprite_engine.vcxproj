@@ -154,7 +154,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalLibraryDirectories>..\external\SDL2-2.0.4\VisualC\x64\Release;..\external\jpeg-9b\x64\Release;..\external\lpng1625\projects\vstudio\x64\Release</AdditionalLibraryDirectories>
       <AdditionalDependencies>dxgi.lib;d3d11.lib;SDL2.lib;jpeg.lib;libpng16.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <SubSystem>Windows</SubSystem>
+      <SubSystem>Console</SubSystem>
       <EntryPointSymbol>mainCRTStartup</EntryPointSymbol>
     </Link>
   </ItemDefinitionGroup>

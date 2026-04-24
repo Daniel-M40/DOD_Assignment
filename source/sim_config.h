@@ -1,5 +1,8 @@
 #pragma once
 
+
+#define VISUALISATION_ENABLED
+
 class SimConfig
 {
 public:

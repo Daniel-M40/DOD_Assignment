@@ -3,12 +3,13 @@
 #ifndef MSC_ENGINE_TEST_H_INCLUDED
 #define MSC_ENGINE_TEST_H_INCLUDED
 
+#include "sim_config.h"
+#include "platform/sdl_init.h"
+#include "circle_gpu.h"
 #include <sdl.h>
 #include "platform/input.h"
-#include "platform/sdl_init.h"
 #include "platform/timer.h"
 #include "platform/window.h"
-#include "circle_gpu.h"
 
 #include <Eigen/Core>
 using Eigen::Vector2f;
@@ -84,11 +85,21 @@ namespace msc
 		//---------------------------------------------------------------------------------------------------------------------
 	private:
 		// Platform specifics
+#ifdef VISUALISATION_ENABLED
 		platform::SDL mSDL;
-		platform::Input mInput;
-		platform::Timer mTimer;
 		platform::Window mWindow;
 
+		std::vector<CircleGPU> gpuData;
+		std::unique_ptr<EngineDX> mEngine;
+		Vector2i mWindowSize;
+#endif
+
+		platform::Input mInput;
+		platform::Timer mTimer;
+
+		//---------------------------------------------------------------------------------------------------------------------
+		// Game Data
+		//---------------------------------------------------------------------------------------------------------------------
 		// Circle SoA data
 		std::vector<float> mPosX;
 		std::vector<float> mPosY;
@@ -102,12 +113,6 @@ namespace msc
 		std::vector<std::string> mNames;
 		uint32_t mActiveCount = 0;
 
-		std::vector<CircleGPU> gpuData;
-
-
-		std::unique_ptr<EngineDX> mEngine;
-		Vector2i mWindowSize;
-
 
 		// Frame timing - sensible initial values for first frame
 		float mFrameTime = 0.01f; // Last frame's frametime
@@ -116,13 +121,6 @@ namespace msc
 		float mAverageFrameTime = 0.01f; // Average frame time (over recent frames)
 		float mAverageFPS = 1 / mAverageFrameTime;
 		const float mFPSUpdateTime = 0.5f;
-		// Time over which to average frame time (how long it takes to update the value)
-
-
-		//---------------------------------------------------------------------------------------------------------------------
-		// Game Data
-		//---------------------------------------------------------------------------------------------------------------------
-	private:
 	};
 } // namespaces
 

@@ -1,17 +1,32 @@
 // Implements EngineTest, a class to test the sprite engine API
 #include "engine_test.h"
+
 #include <sdl.h>
 #include "sim_config.h"
 #include "utility.h"
 #include "render/engine_dx.h"
 
+#ifdef VISUALISATION_ENABLED
+#else
+#include <iostream>
+#endif
 namespace msc
 {
 	// Constructor initialises SDL to receive input/window events and also creates a (hidden) window
+#ifdef VISUALISATION_ENABLED
 	EngineTest::EngineTest() : mSDL(SDL_INIT_EVENTS), mWindow("DOD Assignment", false)
 	{
 		SDL_SetEventFilter(EventFilter, this);
 	}
+
+#else
+	EngineTest::EngineTest()
+	{
+
+	}
+#endif
+
+
 
 	EngineTest::~EngineTest()
 	{
@@ -34,7 +49,10 @@ namespace msc
 		mColB.resize(mActiveCount);
 		mHP.resize(mActiveCount);
 		mNames.resize(mActiveCount);
+
+#ifdef VISUALISATION_ENABLED
 		gpuData.resize(mActiveCount);
+#endif
 
 		float worldX = static_cast<float>(SimConfig::WORLD_SIZE_X);
 		float worldY = static_cast<float>(SimConfig::WORLD_SIZE_Y);
@@ -85,6 +103,7 @@ namespace msc
 	// Render scene to current render target
 	void EngineTest::SceneRender()
 	{
+		#ifdef VISUALISATION_ENABLED
 		
 		for (uint32_t i = 0; i < mActiveCount; ++i)
 		{
@@ -98,25 +117,30 @@ namespace msc
 			gpuData[i].padding = 0.0f;
 		}
 		mEngine->Render(gpuData.data(), mActiveCount);
+
+		#endif
 	}
 
 	//---------------------------------------------------------------------------------------------------------------------
 
 	int EngineTest::Run()
 	{
+		#ifdef VISUALISATION_ENABLED
 		mWindowSize = {1600, 960};
 		SDL_SetWindowSize(mWindow, mWindowSize.x(), mWindowSize.y());
 		SDL_SetWindowPosition(mWindow, 32, 48);
 		SDL_ShowWindow(mWindow);
 		mEngine = std::make_unique<EngineDX>(mWindow);
+		#endif
 
 		if (!SceneSetup())
 		{
 			return EXIT_FAILURE;
 		}
 
+		#ifdef VISUALISATION_ENABLED
 		mEngine->SetRenderMode(RenderMode::Cutout);
-
+	#endif
 
 		mTimer.Reset();
 		mTimer.Start();
@@ -124,13 +148,28 @@ namespace msc
 		while (!PollEvents() && !mInput.KeyHit(SDLK_ESCAPE))
 		{
 			SceneUpdate();
+			#ifdef VISUALISATION_ENABLED
 			mEngine->ClearBackBuffer();
 			SceneRender();
 			mEngine->Present();
+			#endif
 
 			UpdateFrameTime();
+
+#ifdef VISUALISATION_ENABLED
 			std::string title = "FPS: " + std::to_string(1.0f / mAverageFrameTime);
 			SDL_SetWindowTitle(mWindow, title.c_str());
+#else
+			static float printTimer = 0.0f;
+			printTimer += mFrameTime;
+			if (printTimer >= 1.0f)
+			{
+				std::cout << "Circles: " << mActiveCount
+					<< " | Avg Frame: " << (mAverageFrameTime * 1000.0f) << "ms"
+					<< " | FPS: " << (1.0f / mAverageFrameTime) << std::endl;
+				printTimer = 0.0f;
+			}
+#endif
 		}
 
 		return EXIT_SUCCESS;
