@@ -137,6 +137,7 @@ namespace msc
 		std::vector<std::string>	mNames;
 		uint32_t					mActiveCount = 0;
 		uint32_t					mNodeActiveCount = 0;
+		std::vector<uint8_t>		mAlive;
 
 		// Nodes SoA data
 		std::vector<float>		mNodePosX;

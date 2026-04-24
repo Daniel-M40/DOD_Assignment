@@ -47,6 +47,7 @@ namespace msc
 		mColB.resize(mActiveCount);
 		mHP.resize(mActiveCount);
 		mNames.resize(mActiveCount);
+		mAlive.resize(mActiveCount, 1);
 
 		mNodePosX.resize(mNodeActiveCount);
 		mNodePosY.resize(mNodeActiveCount);
@@ -80,7 +81,7 @@ namespace msc
 			mColR[i] = RandomInRange(0.0f, 1.0f);
 			mColG[i] = RandomInRange(0.0f, 1.0f);
 			mColB[i] = RandomInRange(0.0f, 1.0f);
-			mHP[i] = 100;
+			mHP[i] = SimConfig::CIRCLE_MAX_HEALTH;
 			mNames[i] = "Circle_" + std::to_string(i);
 		}
 
@@ -184,6 +185,33 @@ namespace msc
 				}
 
 				#endif
+			}
+		}
+
+		if (SimConfig::CIRCLE_DEATH_ENABLED)
+		{
+			for (uint32_t i = 0; i < mActiveCount;)
+			{
+				if (mAlive[i] == 0)
+				{
+					uint32_t last = mActiveCount - 1;
+					mPosX[i] = mPosX[last];
+					mPosY[i] = mPosY[last];
+					mVelX[i] = mVelX[last];
+					mVelY[i] = mVelY[last];
+					mRadii[i] = mRadii[last];
+					mColR[i] = mColR[last];
+					mColG[i] = mColG[last];
+					mColB[i] = mColB[last];
+					mHP[i] = mHP[last];
+					mNames[i] = mNames[last];
+					mAlive[i] = mAlive[last];
+					mActiveCount--;
+				}
+				else
+				{
+					++i;
+				}
 			}
 		}
 	}
@@ -345,6 +373,10 @@ namespace msc
 			mVelY[circleIndex] += (dy / dist) * strength;
 
 			mHP[circleIndex] -= 10;
+			if (SimConfig::CIRCLE_DEATH_ENABLED && mHP[circleIndex] <= 0)
+			{
+				mAlive[circleIndex] = 0;
+			}
 #ifdef VISUALISATION_ENABLED
 #else
 			float simTime = mTimer.GetTime();

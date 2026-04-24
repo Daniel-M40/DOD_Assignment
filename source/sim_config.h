@@ -27,6 +27,9 @@ public:
     //---------------------------------
 	constexpr static float CIRCLE_MAX_VELOCITY = 100.0f;
     constexpr static float CIRCLE_RADIUS = 5.f;
+    constexpr static float CIRCLE_MAX_HEALTH = 20.f;
+
+    constexpr static bool CIRCLE_DEATH_ENABLED = true;
 
     //---------------------------------
     // NODE CONFIG
