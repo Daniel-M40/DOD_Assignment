@@ -18,6 +18,7 @@ struct PSInput
     float2 uv : UV;
     float3 colour : COLOUR;
     float isNode : ISNODE;
+    float depth : DEPTH;
 };
 
 [maxvertexcount(4)]
@@ -25,8 +26,11 @@ void main(point GSInput input[1], inout TriangleStream<PSInput> output)
 {
     PSInput outVertex;
 
+    float depthScale = 1.0f - input[0].position.z * 0.5f;
+    float scaledRadius = input[0].radius * depthScale;
+
     float2 NDCConversion = 2.0f / backbufferSize;
-    float2 NDCSize = float2(input[0].radius * 2.0f, input[0].radius * 2.0f) * NDCConversion;
+    float2 NDCSize = float2(scaledRadius * 2.0f, scaledRadius * 2.0f) * NDCConversion;
 
     float2 centre;
     centre.x = input[0].position.x * NDCConversion.x - 1.0f;
@@ -36,6 +40,7 @@ void main(point GSInput input[1], inout TriangleStream<PSInput> output)
     outVertex.position.w = 1.0f;
     outVertex.colour = input[0].colour;
     outVertex.isNode = input[0].pad;
+    outVertex.depth = input[0].position.z;
 
     // Top-left
     outVertex.position.xy = centre + float2(-NDCSize.x, NDCSize.y) * 0.5f;

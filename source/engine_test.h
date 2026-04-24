@@ -14,7 +14,7 @@
 #include <Eigen/Core>
 
 #include "thread_pool.h"
-#include "../spatial_hash.h"
+#include "spatial_hash.h"
 using Eigen::Vector2f;
 using Eigen::Vector2i;
 
@@ -117,7 +117,10 @@ namespace msc
 		// Spatial Hash
 		//-----------------------------------------------------
 		#ifdef SPATIAL_HASH_ENABLED
-		SpatialHash mSpatialHash = SpatialHash(SimConfig::CELL_SIZE, static_cast<float>(SimConfig::WORLD_SIZE_X), static_cast<float>(SimConfig::WORLD_SIZE_Y));
+		SpatialHash mSpatialHash = SpatialHash(SimConfig::CELL_SIZE, 
+			static_cast<float>(SimConfig::WORLD_SIZE_X), 
+			static_cast<float>(SimConfig::WORLD_SIZE_Y),
+			static_cast<float>(SimConfig::WORLD_SIZE_Z));
 		#endif
 
 		//-----------------------------------------------------
@@ -127,6 +130,10 @@ namespace msc
 		// Circle SoA data
 		std::vector<float>			mPosX;
 		std::vector<float>			mPosY;
+#ifdef ENABLE_3D
+		std::vector<float>			mPosZ;
+		std::vector<float>			mVelZ;
+#endif
 		std::vector<float>			mVelX;
 		std::vector<float>			mVelY;
 		std::vector<float>			mRadii;
@@ -142,6 +149,10 @@ namespace msc
 		// Nodes SoA data
 		std::vector<float>		mNodePosX;
 		std::vector<float>		mNodePosY;
+#ifdef ENABLE_3D
+		std::vector<float>			mNodePosZ;
+		std::vector<float>			mNodeVelZ;
+#endif
 		std::vector<float>		mNodeVelX;
 		std::vector<float>		mNodeVelY;
 		std::vector<float>		mNodeColR;

@@ -170,7 +170,7 @@
     <ClCompile Include="source\render\utility_dx.cpp" />
     <ClCompile Include="source\utility.cpp" />
     <ClCompile Include="source\thread_pool.cpp" />
-    <ClCompile Include="spatial_hash.cpp" />
+    <ClCompile Include="source\spatial_hash.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="source\sim_config.h" />
@@ -185,7 +185,7 @@
     <ClInclude Include="source\render\utility_dx.h" />
     <ClInclude Include="source\utility.h" />
     <ClInclude Include="source\thread_pool.h" />
-    <ClInclude Include="spatial_hash.h" />
+    <ClInclude Include="source\spatial_hash.h" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="references\SDL2.ref">

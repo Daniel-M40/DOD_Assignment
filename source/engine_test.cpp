@@ -61,6 +61,14 @@ namespace msc
 		mNodePeriod.resize(mNodeActiveCount);
 		mNodeTimer.resize(mNodeActiveCount);
 
+#ifdef ENABLE_3D
+		mPosZ.resize(mActiveCount);
+		mVelZ.resize(mActiveCount);
+		mNodePosZ.resize(mNodeActiveCount);
+		mNodeVelZ.resize(mNodeActiveCount);
+#endif
+
+
 #ifdef VISUALISATION_ENABLED
 		gpuCircleData.resize(mActiveCount);
 		gpuNodeData.resize(mNodeActiveCount);
@@ -68,6 +76,11 @@ namespace msc
 
 		float worldX = static_cast<float>(SimConfig::WORLD_SIZE_X);
 		float worldY = static_cast<float>(SimConfig::WORLD_SIZE_Y);
+
+#ifdef ENABLE_3D
+		float worldZ = static_cast<float>(SimConfig::WORLD_SIZE_Z);
+#endif
+
 		float minVel = -SimConfig::CIRCLE_MAX_VELOCITY;
 		float maxVel = SimConfig::CIRCLE_MAX_VELOCITY;
 
@@ -77,12 +90,17 @@ namespace msc
 			mPosY[i] = RandomInRange(-worldY, worldY);
 			mVelX[i] = RandomInRange(minVel, maxVel);
 			mVelY[i] = RandomInRange(minVel, maxVel);
-			mRadii[i] = 1.0f;
+			mRadii[i] = SimConfig::CIRCLE_RADIUS;
 			mColR[i] = RandomInRange(0.0f, 1.0f);
 			mColG[i] = RandomInRange(0.0f, 1.0f);
 			mColB[i] = RandomInRange(0.0f, 1.0f);
 			mHP[i] = SimConfig::CIRCLE_MAX_HEALTH;
 			mNames[i] = "Circle_" + std::to_string(i);
+
+#ifdef ENABLE_3D
+			mPosZ[i] = RandomInRange(-worldZ, worldZ);
+			mVelZ[i] = RandomInRange(minVel, maxVel);
+#endif
 		}
 
 		for (uint32_t i = 0; i < mNodeActiveCount; ++i)
@@ -90,10 +108,20 @@ namespace msc
 			mNodePosX[i] = RandomInRange(-worldX, worldX);
 			mNodePosY[i] = RandomInRange(-worldY, worldY);
 
+#ifdef ENABLE_3D
+			mNodePosZ[i] = RandomInRange(-worldZ, worldZ);
+#endif
+
+
 			if (SimConfig::MOVING_NODES)
 			{
 				mNodeVelX[i] = RandomInRange(minVel, maxVel);
 				mNodeVelY[i] = RandomInRange(minVel, maxVel);
+
+#ifdef ENABLE_3D
+				mNodeVelZ[i] = RandomInRange(minVel, maxVel);
+#endif
+
 			}
 
 			mNodeRadii[i] = RandomInRange(SimConfig::NODE_MIN_RADIUS, SimConfig::NODE_MAX_RADIUS);
@@ -127,24 +155,7 @@ namespace msc
 
 		#else
 
-		for (uint32_t i = 0; i < mActiveCount; ++i)
-		{
-			if (SimConfig::ENABLE_WALLS)
-			{
-				if (mPosX[i] >= SimConfig::WORLD_SIZE_X || mPosX[i] <= -SimConfig::WORLD_SIZE_X)
-				{
-					mVelX[i] = -mVelX[i];
-				}
-
-				if (mPosY[i] >= SimConfig::WORLD_SIZE_Y || mPosY[i] <= -SimConfig::WORLD_SIZE_Y)
-				{
-					mVelY[i] = -mVelY[i];
-				}
-			}
-
-			mPosX[i] += mVelX[i] * mFrameTime;
-			mPosY[i] += mVelY[i] * mFrameTime;
-		}
+		UpdateCircles(0, mActiveCount);
 
 		#endif
 
@@ -154,7 +165,7 @@ namespace msc
 
 		for (size_t i = 0; i < mActiveCount; i++)
 		{
-			mSpatialHash.Insert(mPosX[i], mPosY[i], i);
+			mSpatialHash.Insert(mPosX[i], mPosY[i], mPosZ[i], i);
 		}
 
 		#endif
@@ -172,7 +183,7 @@ namespace msc
 				float radiusSqrd = mNodeRadii[i] * mNodeRadii[i];
 
 				#ifdef SPATIAL_HASH_ENABLED
-				mSpatialHash.Query(mNodePosX[i], mNodePosY[i], mNodeRadii[i], [&](uint32_t j)
+				mSpatialHash.Query(mNodePosX[i], mNodePosY[i], mNodePosZ[i], mNodeRadii[i], [&](uint32_t j)
 				{
 					NodeActionResolution(i, j, radiusSqrd);
 				});
@@ -206,6 +217,12 @@ namespace msc
 					mHP[i] = mHP[last];
 					mNames[i] = mNames[last];
 					mAlive[i] = mAlive[last];
+
+#ifdef ENABLE_3D
+					mPosZ[i] = mPosZ[last];
+					mVelZ[i] = mVelZ[last];
+#endif
+
 					mActiveCount--;
 				}
 				else
@@ -235,7 +252,13 @@ namespace msc
 				{
 					gpuCircleData[i].posX = mPosX[i];
 					gpuCircleData[i].posY = mPosY[i];
+
+#ifdef ENABLE_3D
+					gpuCircleData[i].posZ = (mPosZ[i] + SimConfig::WORLD_SIZE_Z) / (SimConfig::WORLD_SIZE_Z * 2.0f);
+#else
 					gpuCircleData[i].posZ = 0.5f;
+#endif
+
 					gpuCircleData[i].radius = mRadii[i];
 					gpuCircleData[i].colR = mColR[i];
 					gpuCircleData[i].colG = mColG[i];
@@ -246,12 +269,19 @@ namespace msc
 		}
 
 		mThreadPool.WaitAll();
+
 #else
 		for (uint32_t i = 0; i < mActiveCount; ++i)
 		{
 			gpuCircleData[i].posX = mPosX[i];
 			gpuCircleData[i].posY = mPosY[i];
+
+#ifdef ENABLE_3D
+			gpuCircleData[i].posZ = (mPosZ[i] + SimConfig::WORLD_SIZE_Z) / (SimConfig::WORLD_SIZE_Z * 2.0f);
+#else
 			gpuCircleData[i].posZ = 0.5f;
+#endif
+
 			gpuCircleData[i].radius = mRadii[i];
 			gpuCircleData[i].colR = mColR[i];
 			gpuCircleData[i].colG = mColG[i];
@@ -267,7 +297,11 @@ namespace msc
 		{
 			gpuNodeData[i].posX = mNodePosX[i];
 			gpuNodeData[i].posY = mNodePosY[i];
+#ifdef ENABLE_3D
+			gpuNodeData[i].posZ = (mNodePosZ[i] + SimConfig::WORLD_SIZE_Z) / (SimConfig::WORLD_SIZE_Z * 2.0f);
+#else
 			gpuNodeData[i].posZ = 0.5f;
+#endif
 			gpuNodeData[i].radius = mNodeRadii[i];
 			gpuNodeData[i].colR = mNodeColR[i];
 			gpuNodeData[i].colG = mNodeColG[i];
@@ -350,10 +384,23 @@ namespace msc
 				{
 					mVelY[i] = -mVelY[i];
 				}
+
+				#ifdef ENABLE_3D
+
+				if (mPosZ[i] >= SimConfig::WORLD_SIZE_Z || mPosZ[i] <= -SimConfig::WORLD_SIZE_Z)
+				{
+					mVelZ[i] = -mVelZ[i];
+				}
+
+				#endif // ENABLE_3D
 			}
 
 			mPosX[i] += mVelX[i] * mFrameTime;
 			mPosY[i] += mVelY[i] * mFrameTime;
+
+#ifdef ENABLE_3D
+			mPosZ[i] += mVelZ[i] * mFrameTime;
+#endif
 		}
 	}
 
@@ -361,7 +408,14 @@ namespace msc
 	{
 		float dx = mPosX[circleIndex] - mNodePosX[nodeIndex];
 		float dy = mPosY[circleIndex] - mNodePosY[nodeIndex];
+
+#ifdef ENABLE_3D
+		float dz = mPosZ[circleIndex] - mNodePosZ[nodeIndex];
+		float distSqrd = dx * dx + dy * dy + dz * dz;
+#else 
 		float distSqrd = dx * dx + dy * dy;
+#endif
+
 
 		if (distSqrd < radiusSqrd && distSqrd > 0.0001f)
 		{
@@ -372,6 +426,10 @@ namespace msc
 			mVelX[circleIndex] += (dx / dist) * strength;
 			mVelY[circleIndex] += (dy / dist) * strength;
 
+#ifdef ENABLE_3D
+			mVelZ[circleIndex] += (dz / dist) * strength;
+#endif
+
 			mHP[circleIndex] -= 10;
 			if (SimConfig::CIRCLE_DEATH_ENABLED && mHP[circleIndex] <= 0)
 			{
@@ -380,7 +438,7 @@ namespace msc
 #ifdef VISUALISATION_ENABLED
 #else
 			float simTime = mTimer.GetTime();
-			//std::cout << "Time: " << simTime << "s | " << mNames[j] << " | HP: " << mHP[j] << std::endl;
+			//std::cout << "Time: " << simTime << "s | " << mNames[circleIndex] << " | HP: " << mHP[circleIndex] << std::endl;
 #endif
 
 		}
