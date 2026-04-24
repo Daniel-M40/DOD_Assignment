@@ -14,6 +14,7 @@
 #include <Eigen/Core>
 
 #include "thread_pool.h"
+#include "../spatial_hash.h"
 using Eigen::Vector2f;
 using Eigen::Vector2i;
 
@@ -113,6 +114,13 @@ namespace msc
 		#endif
 
 		//-----------------------------------------------------
+		// Spatial Hash
+		//-----------------------------------------------------
+		#ifdef SPATIAL_HASH_ENABLED
+		SpatialHash mSpatialHash = SpatialHash(SimConfig::CELL_SIZE, static_cast<float>(SimConfig::WORLD_SIZE_X), static_cast<float>(SimConfig::WORLD_SIZE_Y));
+		#endif
+
+		//-----------------------------------------------------
 		// Game Data
 		//-----------------------------------------------------
 
@@ -153,6 +161,7 @@ namespace msc
 
 
 		void UpdateCircles(uint32_t start, uint32_t end);
+		void NodeActionResolution(uint32_t nodeIndex, uint32_t circleIndex, float radiusSqrd);
 	};
 } // namespaces
 

@@ -147,7 +147,16 @@ namespace msc
 
 		#endif
 
+		#ifdef SPATIAL_HASH_ENABLED
 
+		mSpatialHash.Clear();
+
+		for (size_t i = 0; i < mActiveCount; i++)
+		{
+			mSpatialHash.Insert(mPosX[i], mPosY[i], i);
+		}
+
+		#endif
 
 
 		for (uint32_t i = 0; i < mNodeActiveCount; ++i)
@@ -161,30 +170,20 @@ namespace msc
 
 				float radiusSqrd = mNodeRadii[i] * mNodeRadii[i];
 
+				#ifdef SPATIAL_HASH_ENABLED
+				mSpatialHash.Query(mNodePosX[i], mNodePosY[i], mNodeRadii[i], [&](uint32_t j)
+				{
+					NodeActionResolution(i, j, radiusSqrd);
+				});
+
+				#else
+
 				for (uint32_t j = 0; j < mActiveCount; ++j)
 				{
-					float dx = mPosX[j] - mNodePosX[i];
-					float dy = mPosY[j] - mNodePosY[i];
-					float distSqrd = dx * dx + dy * dy;
-
-					if (distSqrd < radiusSqrd && distSqrd > 0.0001f)
-					{
-						float dist = sqrt(distSqrd);
-						float sign = (mNodeType[i] == ENodeType::Attractor) ? -1.0f : 1.0f;
-						float strength = sign * SimConfig::IMPULSE_NODE_STRENGTH / dist;
-
-						mVelX[j] += (dx / dist) * strength;
-						mVelY[j] += (dy / dist) * strength;
-
-						mHP[j] -= 10;
-#ifdef VISUALISATION_ENABLED
-#else
-						float simTime = mTimer.GetTime();
-						//std::cout << "Time: " << simTime << "s | " << mNames[j] << " | HP: " << mHP[j] << std::endl;
-#endif
-
-					}
+					NodeActionResolution(i, j, radiusSqrd);
 				}
+
+				#endif
 			}
 		}
 	}
@@ -300,6 +299,31 @@ namespace msc
 
 			mPosX[i] += mVelX[i] * mFrameTime;
 			mPosY[i] += mVelY[i] * mFrameTime;
+		}
+	}
+
+	void EngineTest::NodeActionResolution(uint32_t nodeIndex, uint32_t circleIndex, float radiusSqrd)
+	{
+		float dx = mPosX[circleIndex] - mNodePosX[nodeIndex];
+		float dy = mPosY[circleIndex] - mNodePosY[nodeIndex];
+		float distSqrd = dx * dx + dy * dy;
+
+		if (distSqrd < radiusSqrd && distSqrd > 0.0001f)
+		{
+			float dist = sqrt(distSqrd);
+			float sign = (mNodeType[nodeIndex] == ENodeType::Attractor) ? -1.0f : 1.0f;
+			float strength = sign * SimConfig::IMPULSE_NODE_STRENGTH / dist;
+
+			mVelX[circleIndex] += (dx / dist) * strength;
+			mVelY[circleIndex] += (dy / dist) * strength;
+
+			mHP[circleIndex] -= 10;
+#ifdef VISUALISATION_ENABLED
+#else
+			float simTime = mTimer.GetTime();
+			//std::cout << "Time: " << simTime << "s | " << mNames[j] << " | HP: " << mHP[j] << std::endl;
+#endif
+
 		}
 	}
 
