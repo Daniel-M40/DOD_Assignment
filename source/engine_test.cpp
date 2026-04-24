@@ -10,17 +10,24 @@
 namespace msc
 {
 
-	// Constructor initialises SDL to receive input/window events and also creates a (hidden) window
 #ifdef VISUALISATION_ENABLED
-	EngineTest::EngineTest() : mSDL(SDL_INIT_EVENTS), mWindow("DOD Assignment", false)
+	EngineTest::EngineTest() : mSDL(SDL_INIT_EVENTS), mWindow("DOD Assignment", false),
+		mSpatialHash(SimConfig::CELL_SIZE, SimConfig::WORLD_SIZE_X, SimConfig::WORLD_SIZE_Y
+#ifdef ENABLE_3D
+			, SimConfig::WORLD_SIZE_Z
+#endif
+		)
 	{
 		SDL_SetEventFilter(EventFilter, this);
 	}
-
 #else
-	EngineTest::EngineTest()
+	EngineTest::EngineTest() :
+		mSpatialHash(SimConfig::CELL_SIZE, SimConfig::WORLD_SIZE_X, SimConfig::WORLD_SIZE_Y
+#ifdef ENABLE_3D
+			, SimConfig::WORLD_SIZE_Z
+#endif
+		)
 	{
-
 	}
 #endif
 
@@ -159,21 +166,14 @@ namespace msc
 
 		#endif
 
-		#ifdef SPATIAL_HASH_ENABLED
-
+		// Spatial hash insert
+#ifdef SPATIAL_HASH_ENABLED
 		mSpatialHash.Clear();
-
 		for (size_t i = 0; i < mActiveCount; i++)
 		{
-#ifdef ENABLE_3D
-			mSpatialHash.Insert(mPosX[i], mPosY[i], mPosZ[i], i);
-#else
-			mSpatialHash.Insert(mPosX[i], mPosY[i], i);
-#endif
-
+			mSpatialHash.Insert(mPosX[i], mPosY[i], GetZ(i), i);
 		}
-
-		#endif
+#endif
 
 
 		for (uint32_t i = 0; i < mNodeActiveCount; ++i)
@@ -187,50 +187,52 @@ namespace msc
 
 				float radiusSqrd = mNodeRadii[i] * mNodeRadii[i];
 
-				#ifdef SPATIAL_HASH_ENABLED
-
-				#ifdef ENABLE_3D
-
-				mSpatialHash.Query(mNodePosX[i], mNodePosY[i], mNodePosZ[i], mNodeRadii[i], [&](uint32_t j)
-				{
-					NodeActionResolution(i, j, radiusSqrd);
-				});
-				#else
-
-				mSpatialHash.Query(mNodePosX[i], mNodePosY[i], mNodeRadii[i], [&](uint32_t j)
+#ifdef SPATIAL_HASH_ENABLED
+				mSpatialHash.Query(mNodePosX[i], mNodePosY[i], GetNodeZ(i), mNodeRadii[i], [&](uint32_t j)
 					{
 						NodeActionResolution(i, j, radiusSqrd);
 					});
-				#endif
-				#else
-
+#else
 				for (uint32_t j = 0; j < mActiveCount; ++j)
 				{
 					NodeActionResolution(i, j, radiusSqrd);
 				}
-
-				#endif
+#endif
 			}
 		}
 
 		if (SimConfig::CIRCLE_COLLISION_ENABLED)
 		{
+#ifdef THREAD_POOL_ENABLED
+			uint32_t chunk = mActiveCount / mNumThreads;
+			for (int t = 0; t < mNumThreads; ++t)
+			{
+				uint32_t start = t * chunk;
+				uint32_t end = (t == mNumThreads - 1) ? mActiveCount : start + chunk;
+				mThreadPool.Submit([this, start, end]
+					{
+						for (uint32_t i = start; i < end; ++i)
+						{
+							float searchRadius = mRadii[i] * 2.0f;
+							mSpatialHash.Query(mPosX[i], mPosY[i], GetZ(i), searchRadius, [&](uint32_t j)
+								{
+									if (j <= i) return;
+									CircleCollisionResolution(i, j);
+								});
+						}
+					});
+			}
+			mThreadPool.WaitAll();
+#else
 			for (uint32_t i = 0; i < mActiveCount; ++i)
 			{
 				float searchRadius = mRadii[i] * 2.0f;
-
 #ifdef SPATIAL_HASH_ENABLED
-
-#ifdef ENABLE_3D
-				mSpatialHash.Query(mPosX[i], mPosY[i], mPosZ[i], searchRadius, [&](uint32_t j)
-#else
-				mSpatialHash.Query(mPosX[i], mPosY[i], searchRadius, [&](uint32_t j)
-#endif
+				mSpatialHash.Query(mPosX[i], mPosY[i], GetZ(i), searchRadius, [&](uint32_t j)
 					{
 						if (j <= i) return;
 						CircleCollisionResolution(i, j);
 					});
-
 #else
 				for (uint32_t j = i + 1; j < mActiveCount; ++j)
 				{
@@ -238,6 +240,7 @@ namespace msc
 				}
 #endif
 			}
+#endif
 		}
 
 		if (SimConfig::CIRCLE_DEATH_ENABLED)

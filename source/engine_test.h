@@ -118,16 +118,10 @@ namespace msc
 		//-----------------------------------------------------
 #ifdef SPATIAL_HASH_ENABLED
 #ifdef ENABLE_3D
-		SpatialHash mSpatialHash = SpatialHash(SimConfig::CELL_SIZE, 
-			static_cast<float>(SimConfig::WORLD_SIZE_X), 
-			static_cast<float>(SimConfig::WORLD_SIZE_Y),
-			static_cast<float>(SimConfig::WORLD_SIZE_Z));
+		SpatialHash<3> mSpatialHash;
 #else
-		SpatialHash mSpatialHash = SpatialHash(SimConfig::CELL_SIZE,
-			static_cast<float>(SimConfig::WORLD_SIZE_X),
-			static_cast<float>(SimConfig::WORLD_SIZE_Y));
+		SpatialHash<2> mSpatialHash;
 #endif
-
 #endif
 
 		//-----------------------------------------------------
@@ -182,6 +176,25 @@ namespace msc
 		void UpdateCircles(uint32_t start, uint32_t end);
 		void NodeActionResolution(uint32_t nodeIndex, uint32_t circleIndex, float radiusSqrd);
 		void CircleCollisionResolution(uint32_t i, uint32_t j);
+
+		// Add as a private method in engine_test.h
+		float GetZ(uint32_t i) const
+		{
+#ifdef ENABLE_3D
+			return mPosZ[i];
+#else
+			return 0.0f;
+#endif
+		}
+
+		float GetNodeZ(uint32_t i) const
+		{
+#ifdef ENABLE_3D
+			return mNodePosZ[i];
+#else
+			return 0.0f;
+#endif
+		}
 	};
 } // namespaces
 
