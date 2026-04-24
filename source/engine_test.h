@@ -24,8 +24,12 @@ namespace msc
 	// class (EngineTest here) has a constructor and destructor declared *but not defined* in this file. This class doesn't
 	// actually need a destructor, but it is declared here and defined as {} in the cpp file.
 	class EngineDX;
-	class ScrollPlane;
-	class ParticleSystem;
+
+	enum class ENodeType
+	{
+		Attractor,
+		Repulsor,
+	};
 
 	class EngineTest
 	{
@@ -100,26 +104,39 @@ namespace msc
 		//---------------------------------------------------------------------------------------------------------------------
 		// Game Data
 		//---------------------------------------------------------------------------------------------------------------------
-		// Circle SoA data
-		std::vector<float> mPosX;
-		std::vector<float> mPosY;
-		std::vector<float> mVelX;
-		std::vector<float> mVelY;
-		std::vector<float> mRadii;
-		std::vector<float> mColR;
-		std::vector<float> mColG;
-		std::vector<float> mColB;
-		std::vector<int32_t> mHP;
-		std::vector<std::string> mNames;
-		uint32_t mActiveCount = 0;
 
+		// Circle SoA data
+		std::vector<float>			mPosX;
+		std::vector<float>			mPosY;
+		std::vector<float>			mVelX;
+		std::vector<float>			mVelY;
+		std::vector<float>			mRadii;
+		std::vector<float>			mColR;
+		std::vector<float>			mColG;
+		std::vector<float>			mColB;
+		std::vector<int32_t>		mHP;
+		std::vector<std::string>	mNames;
+		uint32_t					mActiveCount = 0;
+		uint32_t					mNodeActiveCount = 0;
+
+
+
+		// Nodes SoA data
+		std::vector<float>		mNodePosX;
+		std::vector<float>		mNodePosY;
+		std::vector<float>		mNodeVelX;
+		std::vector<float>		mNodeVelY;
+		std::vector<float>		mNodeRadii;
+		std::vector<ENodeType>	mNodeType;
+		std::vector<float>		mNodePeriod;
+		std::vector<float>		mNodeTimer;
 
 		// Frame timing - sensible initial values for first frame
-		float mFrameTime = 0.01f; // Last frame's frametime
-		float mSumFrameTimes = 0.0f; // Sum of recent frame times
-		uint32_t mNumFrameTimes = 0; // Number of samples in the sum above
-		float mAverageFrameTime = 0.01f; // Average frame time (over recent frames)
-		float mAverageFPS = 1 / mAverageFrameTime;
+		float mFrameTime					= 0.01f;	// Last frame's frametime
+		float mSumFrameTimes				= 0.0f;		// Sum of recent frame times
+		uint32_t mNumFrameTimes				= 0;		// Number of samples in the sum above
+		float mAverageFrameTime				= 0.01f;	// Average frame time (over recent frames)
+		float mAverageFPS					= 1 / mAverageFrameTime;
 		const float mFPSUpdateTime = 0.5f;
 	};
 } // namespaces

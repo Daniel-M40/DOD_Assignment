@@ -5,11 +5,8 @@
 #include "sim_config.h"
 #include "utility.h"
 #include "render/engine_dx.h"
-
-#ifdef VISUALISATION_ENABLED
-#else
 #include <iostream>
-#endif
+
 namespace msc
 {
 	// Constructor initialises SDL to receive input/window events and also creates a (hidden) window
@@ -38,6 +35,7 @@ namespace msc
 	bool EngineTest::SceneSetup()
 	{
 		mActiveCount = SimConfig::NUM_CIRCLES;
+		mNodeActiveCount = SimConfig::NUM_CIRCLES / 20;
 
 		mPosX.resize(mActiveCount);
 		mPosY.resize(mActiveCount);
@@ -50,14 +48,23 @@ namespace msc
 		mHP.resize(mActiveCount);
 		mNames.resize(mActiveCount);
 
+		mNodePosX.resize(mNodeActiveCount);
+		mNodePosY.resize(mNodeActiveCount);
+		mNodeVelX.resize(mNodeActiveCount);
+		mNodeVelY.resize(mNodeActiveCount);
+		mNodeRadii.resize(mNodeActiveCount);
+		mNodeType.resize(mNodeActiveCount);
+		mNodePeriod.resize(mNodeActiveCount);
+		mNodeTimer.resize(mNodeActiveCount);
+
 #ifdef VISUALISATION_ENABLED
 		gpuData.resize(mActiveCount);
 #endif
 
 		float worldX = static_cast<float>(SimConfig::WORLD_SIZE_X);
 		float worldY = static_cast<float>(SimConfig::WORLD_SIZE_Y);
-		float minVel = -SimConfig::MAX_VELOCITY;
-		float maxVel = SimConfig::MAX_VELOCITY;
+		float minVel = -SimConfig::CIRCLE_MAX_VELOCITY;
+		float maxVel = SimConfig::CIRCLE_MAX_VELOCITY;
 
 		for (uint32_t i = 0; i < mActiveCount; ++i)
 		{
@@ -72,6 +79,24 @@ namespace msc
 			mHP[i] = 100;
 			mNames[i] = "Circle_" + std::to_string(i);
 		}
+
+		for (uint32_t i = 0; i < mNodeActiveCount; ++i)
+		{
+			mNodePosX[i] = RandomInRange(-worldX, worldX);
+			mNodePosY[i] = RandomInRange(-worldY, worldY);
+
+			if (SimConfig::MOVING_NODES)
+			{
+				mNodeVelX[i] = RandomInRange(minVel, maxVel);
+				mNodeVelY[i] = RandomInRange(minVel, maxVel);
+			}
+
+			mNodeRadii[i] = RandomInRange(SimConfig::NODE_MIN_RADIUS, SimConfig::NODE_MAX_RADIUS);
+			mNodeType[i] = static_cast<ENodeType>(RandomInRange(0, 1));
+			mNodePeriod[i] = RandomInRange(SimConfig::NODE_MIN_TIME, SimConfig::NODE_MAX_TIME);
+			mNodeTimer[i] = RandomInRange(0.f, mNodePeriod[i]);
+		}
+
 
 		return true;
 	}
@@ -95,6 +120,56 @@ namespace msc
 
 			mPosX[i] += mVelX[i] * mFrameTime;
 			mPosY[i] += mVelY[i] * mFrameTime;
+		}
+
+		for (uint32_t i = 0; i < mNodeActiveCount; ++i)
+		{
+			mNodeTimer[i] -= mFrameTime;
+
+			if (mNodeTimer[i] <= 0.f)
+			{
+				// reset timer and perform action
+				mNodeTimer[i] += mNodePeriod[i];
+
+				float radiusSqrd = mNodeRadii[i] * mNodeRadii[i];
+
+				for (uint32_t j = 0; j < mActiveCount; ++j)
+				{
+					float dx = mPosX[j] - mNodePosX[i];
+					float dy = mPosY[j] - mNodePosY[i];
+					float distSqrd = dx * dx + dy * dy;
+
+					if (distSqrd < radiusSqrd && distSqrd > 0.0001f)
+					{
+						float dist = sqrt(distSqrd);
+						float sign = (mNodeType[i] == ENodeType::Attractor) ? -1.0f : 1.0f;
+						float strength = sign * SimConfig::IMPLUSE_NODE_STRENGTH / dist;
+
+						mVelX[j] += (dx / dist) * strength;
+						mVelY[j] += (dy / dist) * strength;
+
+						mHP[j] -= 10;
+#ifdef VISUALISATION_ENABLED
+#else
+						float simTime = mTimer.GetTime();
+						std::cout << "Time: " << simTime << "s | " << mNames[j] << " | HP: " << mHP[j] << std::endl;
+#endif
+
+					}
+				}
+
+
+				// Node should get all circles within its radius and pull them towards its position
+				if (mNodeType[i] == ENodeType::Attractor)
+				{
+					
+				}
+				// Node should get all circles within its radius and push them away from its position
+				else if (mNodeType[i] == ENodeType::Repulsor)
+				{
+
+				}
+			}
 		}
 	}
 
