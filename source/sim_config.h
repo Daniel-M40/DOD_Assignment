@@ -38,5 +38,6 @@ public:
     constexpr static float NODE_MIN_TIME = 1.f;
     constexpr static float NODE_MAX_TIME = 5.f;
     constexpr static float IMPULSE_NODE_STRENGTH = 50.f;
-    constexpr static bool MOVING_NODES = false;
+    constexpr static bool MOVING_NODES = true;
+    constexpr static bool NODE_VISUALISATION_ENABLED = false;
 };

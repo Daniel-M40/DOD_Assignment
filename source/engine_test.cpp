@@ -42,7 +42,7 @@ namespace msc
 	bool EngineTest::SceneSetup()
 	{
 		mActiveCount = SimConfig::NUM_CIRCLES;
-		mNodeActiveCount = SimConfig::NUM_CIRCLES / 2000;
+		mNodeActiveCount = SimConfig::NUM_CIRCLES / 20;
 
 		mPosX.resize(mActiveCount);
 		mPosY.resize(mActiveCount);
@@ -165,6 +165,36 @@ namespace msc
 		UpdateCircles(0, mActiveCount);
 
 		#endif
+
+		if (SimConfig::MOVING_NODES)
+		{
+			for (uint32_t i = 0; i < mNodeActiveCount; ++i)
+			{
+				if (SimConfig::ENABLE_WALLS)
+				{
+					if (mNodePosX[i] >= SimConfig::WORLD_SIZE_X || mNodePosX[i] <= -SimConfig::WORLD_SIZE_X)
+					{
+						mNodeVelX[i] = -mNodeVelX[i];
+					}
+					if (mNodePosY[i] >= SimConfig::WORLD_SIZE_Y || mNodePosY[i] <= -SimConfig::WORLD_SIZE_Y)
+					{
+						mNodeVelY[i] = -mNodeVelY[i];
+					}
+#ifdef ENABLE_3D
+					if (mNodePosZ[i] >= SimConfig::WORLD_SIZE_Z || mNodePosZ[i] <= -SimConfig::WORLD_SIZE_Z)
+					{
+						mNodeVelZ[i] = -mNodeVelZ[i];
+					}
+#endif
+				}
+
+				mNodePosX[i] += mNodeVelX[i] * mFrameTime;
+				mNodePosY[i] += mNodeVelY[i] * mFrameTime;
+#ifdef ENABLE_3D
+				mNodePosZ[i] += mNodeVelZ[i] * mFrameTime;
+#endif
+			}
+		}
 
 		// Spatial hash insert
 #ifdef SPATIAL_HASH_ENABLED
@@ -336,6 +366,8 @@ namespace msc
 
 		mEngine->Render(gpuCircleData.data(), mActiveCount);
 
+		if (!SimConfig::NODE_VISUALISATION_ENABLED) return;
+
 		//NODE RENDER PASS
 		for (uint32_t i = 0; i < mNodeActiveCount; ++i)
 		{
@@ -469,9 +501,19 @@ namespace msc
 
 			mVelX[circleIndex] += (dx / dist) * strength;
 			mVelY[circleIndex] += (dy / dist) * strength;
-
 #ifdef ENABLE_3D
 			mVelZ[circleIndex] += (dz / dist) * strength;
+#endif
+
+			// Clamp velocity
+			float maxVel = SimConfig::CIRCLE_MAX_VELOCITY;
+			if (mVelX[circleIndex] > maxVel) mVelX[circleIndex] = maxVel;
+			if (mVelX[circleIndex] < -maxVel) mVelX[circleIndex] = -maxVel;
+			if (mVelY[circleIndex] > maxVel) mVelY[circleIndex] = maxVel;
+			if (mVelY[circleIndex] < -maxVel) mVelY[circleIndex] = -maxVel;
+#ifdef ENABLE_3D
+			if (mVelZ[circleIndex] > maxVel) mVelZ[circleIndex] = maxVel;
+			if (mVelZ[circleIndex] < -maxVel) mVelZ[circleIndex] = -maxVel;
 #endif
 
 			mHP[circleIndex] -= 10;
