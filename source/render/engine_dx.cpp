@@ -16,6 +16,7 @@
 
 namespace msc
 {
+	
 	//-------------------------------------------------------------------------------------------------
 	// Construction / Initialisation
 	//-------------------------------------------------------------------------------------------------
@@ -360,22 +361,34 @@ namespace msc
 		{"padding",  0, DXGI_FORMAT_R32_FLOAT,       0, 28, D3D11_INPUT_PER_VERTEX_DATA, 0},
 	};
 
+	D3D11_INPUT_ELEMENT_DESC CircleInstanceLayout[] =
+	{
+		// Per-vertex data (slot 0)
+		{"POSITION",      0, DXGI_FORMAT_R32G32_FLOAT,   0,  0, D3D11_INPUT_PER_VERTEX_DATA,   0},
+
+		// Per-instance data (slot 1)
+		{"INST_POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 1,  0, D3D11_INPUT_PER_INSTANCE_DATA, 1},
+		{"INST_RADIUS",   0, DXGI_FORMAT_R32_FLOAT,       1, 12, D3D11_INPUT_PER_INSTANCE_DATA, 1},
+		{"INST_COLOUR",   0, DXGI_FORMAT_R32G32B32_FLOAT, 1, 16, D3D11_INPUT_PER_INSTANCE_DATA, 1},
+		{"INST_PADDING",  0, DXGI_FORMAT_R32_FLOAT,       1, 28, D3D11_INPUT_PER_INSTANCE_DATA, 1},
+	};
+
 	// Prepare various pipeline state objects. No flexibility in the engine here, just various hard-coded settings
 	void EngineDX::CreatePipelineStateObjects()
 	{
 		// Only one set of vertex/geometry/pixel shaders used in this app. They convert sprite instances into
 		// textured quads with appropriate UV offsetting into sprite atlas
 		mCircleVS = std::make_unique<ShaderDX>(mDevice, ShaderType::Vertex, "circle_vs");
-		mCircleGS = std::make_unique<ShaderDX>(mDevice, ShaderType::Geometry, "circle_gs");
+		//mCircleGS = std::make_unique<ShaderDX>(mDevice, ShaderType::Geometry, "circle_gs");
 		mCirclePS = std::make_unique<ShaderDX>(mDevice, ShaderType::Pixel, "circle_ps");
 
 
 		// Create the vertex layout so the vertex shader knows what data to expect. This will convert the
 		// CircleDataLayout structure above into a DirectX object we use at render time. Need to pass an
 		// "example" vertex shader to validate the layout, which is why mCircleVS is used
-		mDevice->CreateInputLayout(CircleDataLayout,
-		                           sizeof(CircleDataLayout) / sizeof(CircleDataLayout[0]),
-		                           mCircleVS->ByteCode(), mCircleVS->ByteCodeLength(), &mSpriteVertexLayout);
+		mDevice->CreateInputLayout(CircleInstanceLayout,
+			sizeof(CircleInstanceLayout) / sizeof(CircleInstanceLayout[0]),
+			mCircleVS->ByteCode(), mCircleVS->ByteCodeLength(), &mSpriteVertexLayout);
 		mContext->IASetInputLayout(mSpriteVertexLayout);
 
 
@@ -445,7 +458,8 @@ namespace msc
 		bufferDesc.StructureByteStride = 0;
 		bufferDesc.ByteWidth = sizeof(mPerFrameCBStruct);
 		mDevice->CreateBuffer(&bufferDesc, nullptr, &mPerFrameCB);
-		mContext->GSSetConstantBuffers(0, 1, &mPerFrameCB.p);
+		mContext->VSSetConstantBuffers(0, 1, &mPerFrameCB.p);
+		//mContext->GSSetConstantBuffers(0, 1, &mPerFrameCB.p);
 		mContext->PSSetConstantBuffers(0, 1, &mPerFrameCB.p);
 		// Set constant buffer straight away on geometry shader buffer 0
 
@@ -461,6 +475,22 @@ namespace msc
 		bufferDesc.StructureByteStride = 0;
 		bufferDesc.ByteWidth = SimConfig::NUM_CIRCLES * sizeof(CircleGPU);
 		mDevice->CreateBuffer(&bufferDesc, nullptr, &mCirclesVertexBuffer);
+
+		QuadVertex quadVerts[] = {
+	{-1.0f,  1.0f}, // top-left
+	{-1.0f, -1.0f}, // bottom-left
+	{ 1.0f,  1.0f}, // top-right
+	{ 1.0f, -1.0f}, // bottom-right
+		};
+
+
+		D3D11_BUFFER_DESC quadDesc{};
+		quadDesc.ByteWidth = sizeof(quadVerts);
+		quadDesc.Usage = D3D11_USAGE_DEFAULT;
+		quadDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+		D3D11_SUBRESOURCE_DATA quadData{};
+		quadData.pSysMem = quadVerts;
+		mDevice->CreateBuffer(&quadDesc, &quadData, &mQuadVertexBuffer);
 	}
 
 
@@ -482,7 +512,7 @@ namespace msc
 	void EngineDX::SetRenderMode(RenderMode renderMode)
 	{
 		mCircleVS->Set(mContext);
-		mCircleGS->Set(mContext);
+		//mCircleGS->Set(mContext);
 		mCirclePS->Set(mContext);
 
 		if (renderMode == RenderMode::Cutout)
@@ -514,7 +544,7 @@ namespace msc
 		mSwapChain->Present((vSync ? 1 : 0), 0);
 	}
 
-	void EngineDX::Render(const CircleGPU* data, uint32_t count)
+	void EngineDX::RenderOld(const CircleGPU* data, uint32_t count)
 	{
 		// Map vertex buffer and copy circle data in
 		D3D11_MAPPED_SUBRESOURCE bufferData;
@@ -544,7 +574,7 @@ namespace msc
 
 		// Set shaders
 		mCircleVS->Set(mContext);
-		mCircleGS->Set(mContext);
+		//mCircleGS->Set(mContext);
 		mCirclePS->Set(mContext);
 
 		// Bind vertex buffer and draw
@@ -554,6 +584,47 @@ namespace msc
 		mContext->Draw(count, 0);
 	}
 
+	void EngineDX::Render(const CircleGPU* data, uint32_t count)
+	{
+		// Update instance buffer
+		D3D11_MAPPED_SUBRESOURCE bufferData;
+		if (FAILED(mContext->Map(mCirclesVertexBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &bufferData)))
+			return;
+		memcpy(bufferData.pData, data, count * sizeof(CircleGPU));
+		mContext->Unmap(mCirclesVertexBuffer, 0);
+
+		// Update constant buffer
+		D3D11_MAPPED_SUBRESOURCE cbData;
+		if (SUCCEEDED(mContext->Map(mPerFrameCB, 0, D3D11_MAP_WRITE_DISCARD, 0, &cbData)))
+		{
+			mPerFrameCBStruct.backbufferSize[0] = static_cast<float>(mBackBufferSize.x());
+			mPerFrameCBStruct.backbufferSize[1] = static_cast<float>(mBackBufferSize.y());
+#ifdef ENABLE_3D
+			mPerFrameCBStruct.is3D = 1.0f;
+#else
+			mPerFrameCBStruct.is3D = 0.0f;
+#endif
+			memcpy(cbData.pData, &mPerFrameCBStruct, sizeof(mPerFrameCBStruct));
+			mContext->Unmap(mPerFrameCB, 0);
+		}
+
+		// Set shaders (no GS now)
+		mCircleVS->Set(mContext);
+		mCirclePS->Set(mContext);
+		ShaderDX::Disable(mContext, ShaderType::Geometry);
+
+		// Bind both buffers - quad mesh in slot 0, instance data in slot 1
+		ID3D11Buffer* buffers[2] = { mQuadVertexBuffer.p, mCirclesVertexBuffer.p };
+		UINT strides[2] = { sizeof(QuadVertex), sizeof(CircleGPU) };
+		UINT offsets[2] = { 0, 0 };
+		mContext->IASetVertexBuffers(0, 2, buffers, strides, offsets);
+
+		// Triangle strip for the quad
+		mContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+
+		// Draw 4 vertices per instance, count instances
+		mContext->DrawInstanced(4, count, 0, 0);
+	}
 
 	//-------------------------------------------------------------------------------------------------
 	// Debugging

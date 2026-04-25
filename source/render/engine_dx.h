@@ -83,6 +83,9 @@ namespace msc
 		// Display back buffer, optionally request vertical synchronisation
 		void Present(bool vSync = false);
 
+		CComPtr<ID3D11Buffer> mQuadVertexBuffer;
+
+		void RenderOld(const CircleGPU* data, uint32_t count);
 		void Render(const CircleGPU* data, uint32_t count);
 
 

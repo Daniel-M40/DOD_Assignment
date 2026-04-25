@@ -10,7 +10,7 @@ public:
     //---------------------------------
     // WORLD CONFIG
     //---------------------------------
-    static const int NUM_CIRCLES = 100000;
+    static const int NUM_CIRCLES = 2500000;
     static const int WORLD_SIZE_X = 1000;
     static const int WORLD_SIZE_Y = 1000;
     static const int WORLD_SIZE_Z = 1000;
@@ -19,7 +19,7 @@ public:
     //---------------------------------
     // SPATIAL HASH CONFIG
     //---------------------------------
-    static const int CELL_SIZE = 60;
+    static const int CELL_SIZE = 30;
 
     //---------------------------------
     // CIRCLE CONFIG
@@ -38,6 +38,6 @@ public:
     constexpr static float NODE_MIN_TIME = 1.f;
     constexpr static float NODE_MAX_TIME = 5.f;
     constexpr static float IMPULSE_NODE_STRENGTH = 50.f;
-    constexpr static bool MOVING_NODES = true;
+    constexpr static bool MOVING_NODES = false;
     constexpr static bool NODE_VISUALISATION_ENABLED = false;
 };

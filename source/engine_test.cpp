@@ -364,7 +364,8 @@ namespace msc
 		}
 #endif
 
-		mEngine->Render(gpuCircleData.data(), mActiveCount);
+		uint32_t renderCount = (std::min)(mActiveCount, (uint32_t)500000);
+		mEngine->Render(gpuCircleData.data(), renderCount);
 
 		if (!SimConfig::NODE_VISUALISATION_ENABLED) return;
 
