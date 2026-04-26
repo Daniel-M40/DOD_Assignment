@@ -10,7 +10,7 @@ public:
     //---------------------------------
     // WORLD CONFIG
     //---------------------------------
-    static const int NUM_CIRCLES = 100000;
+    static const int NUM_CIRCLES = 1000000;
     static const int WORLD_SIZE_X = 1000;
     static const int WORLD_SIZE_Y = 1000;
     static const int WORLD_SIZE_Z = 1000;
@@ -19,7 +19,7 @@ public:
     //---------------------------------
     // SPATIAL HASH CONFIG
     //---------------------------------
-    static const int CELL_SIZE = 60;
+    static const int CELL_SIZE = 120;
 
     //---------------------------------
     // CIRCLE CONFIG
