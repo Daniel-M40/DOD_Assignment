@@ -54,8 +54,6 @@ namespace msc
 		mColB.resize(mActiveCount);
 
 		// Only allocate death-system arrays when the feature is enabled.
-		// When disabled this saves ~40+ bytes per circle of cache pressure
-		// (4 bytes HP + 1 byte alive + ~32 bytes string overhead per circle).
 		if constexpr (SimConfig::CIRCLE_DEATH_ENABLED)
 		{
 			mHP.resize(mActiveCount);
@@ -320,108 +318,8 @@ namespace msc
 							mSpatialHash.QueryBatch(nodePX, nodePY, 0.0f, mNodeRadii[i],
 								[&](const uint32_t* indices, uint32_t count)
 								{
-									uint32_t e = 0;
-
-									// Batch process 4 circles per iteration.
-									// Fixed-size local arrays enable compiler auto-vectorisation
-									// into SIMD instructions (SSE/AVX) in optimised builds.
-									constexpr uint32_t BATCH = 4;
-									for (; e + BATCH <= count; e += BATCH)
-									{
-										uint32_t idx[BATCH];
-										for (uint32_t b = 0; b < BATCH; ++b)
-											idx[b] = indices[e + b];
-
-										// Gather positions
-										float px[BATCH], py[BATCH];
-										for (uint32_t b = 0; b < BATCH; ++b)
-										{
-											px[b] = pPosX[idx[b]];
-											py[b] = pPosY[idx[b]];
-										}
-
-										// Distance squared
-										float dx[BATCH], dy[BATCH], distSqrd[BATCH];
-										for (uint32_t b = 0; b < BATCH; ++b)
-										{
-											dx[b] = px[b] - nodePX;
-											dy[b] = py[b] - nodePY;
-											distSqrd[b] = dx[b] * dx[b] + dy[b] * dy[b];
-										}
-
-										// Range check
-										bool inRange[BATCH];
-										bool anyInRange = false;
-										for (uint32_t b = 0; b < BATCH; ++b)
-										{
-											inRange[b] = (distSqrd[b] < radiusSqrd && distSqrd[b] > 0.0001f);
-											anyInRange = anyInRange || inRange[b];
-										}
-
-										if (!anyInRange) continue;
-
-										// Force factor (0 for out-of-range, avoids branching)
-										float factor[BATCH];
-										for (uint32_t b = 0; b < BATCH; ++b)
-											factor[b] = inRange[b] ? (signStrength / distSqrd[b]) : 0.0f;
-
-										// Apply velocity change and clamp
-										for (uint32_t b = 0; b < BATCH; ++b)
-										{
-											float vx = pVelX[idx[b]] + dx[b] * factor[b];
-											float vy = pVelY[idx[b]] + dy[b] * factor[b];
-
-											if (vx > maxVel)  vx = maxVel;
-											if (vx < -maxVel) vx = -maxVel;
-											if (vy > maxVel)  vy = maxVel;
-											if (vy < -maxVel) vy = -maxVel;
-
-											pVelX[idx[b]] = vx;
-											pVelY[idx[b]] = vy;
-										}
-
-										// HP/death — only when enabled, completely compiled out otherwise
-										if constexpr (SimConfig::CIRCLE_DEATH_ENABLED)
-										{
-											for (uint32_t b = 0; b < BATCH; ++b)
-											{
-												if (inRange[b])
-												{
-													pHP[idx[b]] -= 10;
-													if (pHP[idx[b]] <= 0)
-														mAlive[idx[b]] = 0;
-												}
-											}
-										}
-									}
-
-									// Scalar tail
-									for (; e < count; ++e)
-									{
-										uint32_t j = indices[e];
-										float dx = pPosX[j] - nodePX;
-										float dy = pPosY[j] - nodePY;
-										float distSqrd = dx * dx + dy * dy;
-
-										if (distSqrd < radiusSqrd && distSqrd > 0.0001f)
-										{
-											float factor = signStrength / distSqrd;
-											pVelX[j] += dx * factor;
-											pVelY[j] += dy * factor;
-
-											if (pVelX[j] > maxVel)  pVelX[j] = maxVel;
-											if (pVelX[j] < -maxVel) pVelX[j] = -maxVel;
-											if (pVelY[j] > maxVel)  pVelY[j] = maxVel;
-											if (pVelY[j] < -maxVel) pVelY[j] = -maxVel;
-
-											if constexpr (SimConfig::CIRCLE_DEATH_ENABLED)
-											{
-												pHP[j] -= 10;
-												if (pHP[j] <= 0)
-													mAlive[j] = 0;
-											}
-										}
-									}
+									ProcessNodeBatch(indices, count, nodePX, nodePY,
+										radiusSqrd, signStrength, pPosX, pPosY, pVelX, pVelY, pHP);
 								});
 #else
 							for (uint32_t j = 0; j < mActiveCount; ++j)
@@ -735,7 +633,6 @@ namespace msc
 		}
 	}
 
-
 	void EngineTest::CircleCollisionResolution(uint32_t i, uint32_t j)
 	{
 		float dx = mPosX[j] - mPosX[i];
@@ -789,6 +686,106 @@ namespace msc
 				mVelZ[i] += relVelN * nz;
 				mVelZ[j] -= relVelN * nz;
 #endif
+			}
+		}
+	}
+
+	void EngineTest::ProcessNodeBatch(const uint32_t* indices, uint32_t count,
+		float nodePX, float nodePY, float radiusSqrd, float signStrength,
+		const float* pPosX, const float* pPosY, float* pVelX, float* pVelY,
+		int32_t* pHP)
+	{
+		constexpr float maxVel = SimConfig::CIRCLE_MAX_VELOCITY;
+		uint32_t e = 0;
+
+		constexpr uint32_t BATCH = 4;
+		for (; e + BATCH <= count; e += BATCH)
+		{
+			uint32_t idx[BATCH];
+			for (uint32_t b = 0; b < BATCH; ++b)
+				idx[b] = indices[e + b];
+
+			float px[BATCH], py[BATCH];
+			for (uint32_t b = 0; b < BATCH; ++b)
+			{
+				px[b] = pPosX[idx[b]];
+				py[b] = pPosY[idx[b]];
+			}
+
+			float dx[BATCH], dy[BATCH], distSqrd[BATCH];
+			for (uint32_t b = 0; b < BATCH; ++b)
+			{
+				dx[b] = px[b] - nodePX;
+				dy[b] = py[b] - nodePY;
+				distSqrd[b] = dx[b] * dx[b] + dy[b] * dy[b];
+			}
+
+			bool inRange[BATCH];
+			bool anyInRange = false;
+			for (uint32_t b = 0; b < BATCH; ++b)
+			{
+				inRange[b] = (distSqrd[b] < radiusSqrd && distSqrd[b] > 0.0001f);
+				anyInRange = anyInRange || inRange[b];
+			}
+
+			if (!anyInRange) continue;
+
+			float factor[BATCH];
+			for (uint32_t b = 0; b < BATCH; ++b)
+				factor[b] = inRange[b] ? (signStrength / distSqrd[b]) : 0.0f;
+
+			for (uint32_t b = 0; b < BATCH; ++b)
+			{
+				float vx = pVelX[idx[b]] + dx[b] * factor[b];
+				float vy = pVelY[idx[b]] + dy[b] * factor[b];
+
+				if (vx > maxVel)  vx = maxVel;
+				if (vx < -maxVel) vx = -maxVel;
+				if (vy > maxVel)  vy = maxVel;
+				if (vy < -maxVel) vy = -maxVel;
+
+				pVelX[idx[b]] = vx;
+				pVelY[idx[b]] = vy;
+			}
+
+			if constexpr (SimConfig::CIRCLE_DEATH_ENABLED)
+			{
+				for (uint32_t b = 0; b < BATCH; ++b)
+				{
+					if (inRange[b])
+					{
+						pHP[idx[b]] -= 10;
+						if (pHP[idx[b]] <= 0)
+							mAlive[idx[b]] = 0;
+					}
+				}
+			}
+		}
+
+		for (; e < count; ++e)
+		{
+			uint32_t j = indices[e];
+			float dx = pPosX[j] - nodePX;
+			float dy = pPosY[j] - nodePY;
+			float distSqrd = dx * dx + dy * dy;
+
+			if (distSqrd < radiusSqrd && distSqrd > 0.0001f)
+			{
+				float factor = signStrength / distSqrd;
+				pVelX[j] += dx * factor;
+				pVelY[j] += dy * factor;
+
+				if (pVelX[j] > maxVel)  pVelX[j] = maxVel;
+				if (pVelX[j] < -maxVel) pVelX[j] = -maxVel;
+				if (pVelY[j] > maxVel)  pVelY[j] = maxVel;
+				if (pVelY[j] < -maxVel) pVelY[j] = -maxVel;
+
+				if constexpr (SimConfig::CIRCLE_DEATH_ENABLED)
+				{
+					pHP[j] -= 10;
+					if (pHP[j] <= 0)
+						mAlive[j] = 0;
+				}
 			}
 		}
 	}
