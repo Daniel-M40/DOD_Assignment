@@ -10,26 +10,20 @@
 namespace msc
 {
 
-#ifdef VISUALISATION_ENABLED
-	EngineTest::EngineTest() : mSDL(SDL_INIT_EVENTS), mWindow("DOD Assignment", false),
-		mSpatialHash(SimConfig::CELL_SIZE, SimConfig::WORLD_SIZE_X, SimConfig::WORLD_SIZE_Y
-#ifdef ENABLE_3D
-			, SimConfig::WORLD_SIZE_Z
-#endif
-		)
-	{
-		SDL_SetEventFilter(EventFilter, this);
-	}
-#else
 	EngineTest::EngineTest() :
+		mSDL(SDL_INIT_EVENTS),
+		mWindow("DOD Assignment", false),
 		mSpatialHash(SimConfig::CELL_SIZE, SimConfig::WORLD_SIZE_X, SimConfig::WORLD_SIZE_Y
 #ifdef ENABLE_3D
 			, SimConfig::WORLD_SIZE_Z
 #endif
 		)
 	{
+		if constexpr (SimConfig::VISUALISATION)
+		{
+			SDL_SetEventFilter(EventFilter, this);
+		}
 	}
-#endif
 
 	EngineTest::~EngineTest()
 	{
@@ -38,7 +32,6 @@ namespace msc
 
 #pragma region Scene Lifecycle
 
-	// Load and pre-process game resources. Returns true on success
 	bool EngineTest::SceneSetup()
 	{
 		mActiveCount = SimConfig::NUM_CIRCLES;
@@ -53,7 +46,6 @@ namespace msc
 		mColG.resize(mActiveCount);
 		mColB.resize(mActiveCount);
 
-		// Only allocate death-system arrays when the feature is enabled.
 		if constexpr (SimConfig::CIRCLE_DEATH_ENABLED)
 		{
 			mHP.resize(mActiveCount);
@@ -80,11 +72,11 @@ namespace msc
 		mNodeVelZ.resize(mNodeActiveCount);
 #endif
 
-
-#ifdef VISUALISATION_ENABLED
-		gpuCircleData.resize(mActiveCount);
-		gpuNodeData.resize(mNodeActiveCount);
-#endif
+		if constexpr (SimConfig::VISUALISATION)
+		{
+			gpuCircleData.resize(mActiveCount);
+			gpuNodeData.resize(mNodeActiveCount);
+		}
 
 		float worldX = static_cast<float>(SimConfig::WORLD_SIZE_X);
 		float worldY = static_cast<float>(SimConfig::WORLD_SIZE_Y);
@@ -128,7 +120,7 @@ namespace msc
 			mNodePosZ[i] = RandomInRange(-worldZ, worldZ);
 #endif
 
-			if (SimConfig::MOVING_NODES)
+			if constexpr (SimConfig::MOVING_NODES)
 			{
 				mNodeVelX[i] = RandomInRange(minVel, maxVel);
 				mNodeVelY[i] = RandomInRange(minVel, maxVel);
@@ -151,124 +143,131 @@ namespace msc
 		return true;
 	}
 
-	// Main scene update code. Called every frame, uses mFrameTime member for timing
 	void EngineTest::SceneUpdate()
 	{
-		// --- Phase 1: Update circle positions (parallelised) ---
-#ifdef THREAD_POOL_ENABLED
-		uint32_t chunk = mActiveCount / mNumThreads;
-		for (int t = 0; t < mNumThreads; ++t)
+		// --- Phase 1: Update circle positions ---
+		if constexpr (SimConfig::THREADING)
 		{
-			uint32_t start = t * chunk;
-			uint32_t end = (t == mNumThreads - 1) ? mActiveCount : start + chunk;
-			mThreadPool.Submit([this, start, end] { UpdateCircles(start, end); });
-		}
-		mThreadPool.WaitAll();
-#else
-		UpdateCircles(0, mActiveCount);
-#endif
-
-		// --- Phase 2: Update node positions (parallelised) ---
-		if (SimConfig::MOVING_NODES)
-		{
-#ifdef THREAD_POOL_ENABLED
-			uint32_t nodeChunk = mNodeActiveCount / mNumThreads;
+			uint32_t chunk = mActiveCount / mNumThreads;
 			for (int t = 0; t < mNumThreads; ++t)
 			{
-				uint32_t nStart = t * nodeChunk;
-				uint32_t nEnd = (t == mNumThreads - 1) ? mNodeActiveCount : nStart + nodeChunk;
-				mThreadPool.Submit([this, nStart, nEnd]
-					{
-						for (uint32_t i = nStart; i < nEnd; ++i)
-						{
-							if (SimConfig::ENABLE_WALLS)
-							{
-								if (mNodePosX[i] >= SimConfig::WORLD_SIZE_X || mNodePosX[i] <= -SimConfig::WORLD_SIZE_X)
-									mNodeVelX[i] = -mNodeVelX[i];
-								if (mNodePosY[i] >= SimConfig::WORLD_SIZE_Y || mNodePosY[i] <= -SimConfig::WORLD_SIZE_Y)
-									mNodeVelY[i] = -mNodeVelY[i];
-#ifdef ENABLE_3D
-								if (mNodePosZ[i] >= SimConfig::WORLD_SIZE_Z || mNodePosZ[i] <= -SimConfig::WORLD_SIZE_Z)
-									mNodeVelZ[i] = -mNodeVelZ[i];
-#endif
-							}
-							mNodePosX[i] += mNodeVelX[i] * mFrameTime;
-							mNodePosY[i] += mNodeVelY[i] * mFrameTime;
-#ifdef ENABLE_3D
-							mNodePosZ[i] += mNodeVelZ[i] * mFrameTime;
-#endif
-						}
-					});
+				uint32_t start = t * chunk;
+				uint32_t end = (t == mNumThreads - 1) ? mActiveCount : start + chunk;
+				mThreadPool.Submit([this, start, end] { UpdateCircles(start, end); });
 			}
 			mThreadPool.WaitAll();
-#else
-			for (uint32_t i = 0; i < mNodeActiveCount; ++i)
+		}
+		else
+		{
+			UpdateCircles(0, mActiveCount);
+		}
+
+		// --- Phase 2: Update node positions ---
+		if constexpr (SimConfig::MOVING_NODES)
+		{
+			if constexpr (SimConfig::THREADING)
 			{
-				if (SimConfig::ENABLE_WALLS)
+				uint32_t nodeChunk = mNodeActiveCount / mNumThreads;
+				for (int t = 0; t < mNumThreads; ++t)
 				{
-					if (mNodePosX[i] >= SimConfig::WORLD_SIZE_X || mNodePosX[i] <= -SimConfig::WORLD_SIZE_X)
-						mNodeVelX[i] = -mNodeVelX[i];
-					if (mNodePosY[i] >= SimConfig::WORLD_SIZE_Y || mNodePosY[i] <= -SimConfig::WORLD_SIZE_Y)
-						mNodeVelY[i] = -mNodeVelY[i];
+					uint32_t nStart = t * nodeChunk;
+					uint32_t nEnd = (t == mNumThreads - 1) ? mNodeActiveCount : nStart + nodeChunk;
+					mThreadPool.Submit([this, nStart, nEnd]
+						{
+							for (uint32_t i = nStart; i < nEnd; ++i)
+							{
+								if constexpr (SimConfig::ENABLE_WALLS)
+								{
+									if (mNodePosX[i] >= SimConfig::WORLD_SIZE_X || mNodePosX[i] <= -SimConfig::WORLD_SIZE_X)
+										mNodeVelX[i] = -mNodeVelX[i];
+									if (mNodePosY[i] >= SimConfig::WORLD_SIZE_Y || mNodePosY[i] <= -SimConfig::WORLD_SIZE_Y)
+										mNodeVelY[i] = -mNodeVelY[i];
 #ifdef ENABLE_3D
-					if (mNodePosZ[i] >= SimConfig::WORLD_SIZE_Z || mNodePosZ[i] <= -SimConfig::WORLD_SIZE_Z)
-						mNodeVelZ[i] = -mNodeVelZ[i];
+									if (mNodePosZ[i] >= SimConfig::WORLD_SIZE_Z || mNodePosZ[i] <= -SimConfig::WORLD_SIZE_Z)
+										mNodeVelZ[i] = -mNodeVelZ[i];
+#endif
+								}
+								mNodePosX[i] += mNodeVelX[i] * mFrameTime;
+								mNodePosY[i] += mNodeVelY[i] * mFrameTime;
+#ifdef ENABLE_3D
+								mNodePosZ[i] += mNodeVelZ[i] * mFrameTime;
+#endif
+							}
+						});
+				}
+				mThreadPool.WaitAll();
+			}
+			else
+			{
+				for (uint32_t i = 0; i < mNodeActiveCount; ++i)
+				{
+					if constexpr (SimConfig::ENABLE_WALLS)
+					{
+						if (mNodePosX[i] >= SimConfig::WORLD_SIZE_X || mNodePosX[i] <= -SimConfig::WORLD_SIZE_X)
+							mNodeVelX[i] = -mNodeVelX[i];
+						if (mNodePosY[i] >= SimConfig::WORLD_SIZE_Y || mNodePosY[i] <= -SimConfig::WORLD_SIZE_Y)
+							mNodeVelY[i] = -mNodeVelY[i];
+#ifdef ENABLE_3D
+						if (mNodePosZ[i] >= SimConfig::WORLD_SIZE_Z || mNodePosZ[i] <= -SimConfig::WORLD_SIZE_Z)
+							mNodeVelZ[i] = -mNodeVelZ[i];
+#endif
+					}
+					mNodePosX[i] += mNodeVelX[i] * mFrameTime;
+					mNodePosY[i] += mNodeVelY[i] * mFrameTime;
+#ifdef ENABLE_3D
+					mNodePosZ[i] += mNodeVelZ[i] * mFrameTime;
 #endif
 				}
-				mNodePosX[i] += mNodeVelX[i] * mFrameTime;
-				mNodePosY[i] += mNodeVelY[i] * mFrameTime;
-#ifdef ENABLE_3D
-				mNodePosZ[i] += mNodeVelZ[i] * mFrameTime;
-#endif
 			}
-#endif
 		}
 
-		// --- Phase 3: Rebuild spatial hash (parallelised count + insert) ---
-#ifdef SPATIAL_HASH_ENABLED
-		mSpatialHash.Clear();
-
-#ifdef THREAD_POOL_ENABLED
-		// Parallel count: each thread counts its chunk
-		uint32_t countChunk = mActiveCount / mNumThreads;
-		for (int t = 0; t < mNumThreads; ++t)
+		// --- Phase 3: Rebuild spatial hash ---
+		if constexpr (SimConfig::SPATIAL_HASHING)
 		{
-			uint32_t cStart = t * countChunk;
-			uint32_t cEnd = (t == mNumThreads - 1) ? mActiveCount : cStart + countChunk;
-			mThreadPool.Submit([this, cStart, cEnd]
+			mSpatialHash.Clear();
+
+			if constexpr (SimConfig::THREADING)
+			{
+				uint32_t countChunk = mActiveCount / mNumThreads;
+				for (int t = 0; t < mNumThreads; ++t)
 				{
-					for (uint32_t i = cStart; i < cEnd; ++i)
-						mSpatialHash.CountAtomic(mPosX[i], mPosY[i], GetZ(i));
-				});
-		}
-		mThreadPool.WaitAll();
+					uint32_t cStart = t * countChunk;
+					uint32_t cEnd = (t == mNumThreads - 1) ? mActiveCount : cStart + countChunk;
+					mThreadPool.Submit([this, cStart, cEnd]
+						{
+							for (uint32_t i = cStart; i < cEnd; ++i)
+								mSpatialHash.CountAtomic(mPosX[i], mPosY[i], GetZ(i));
+						});
+				}
+				mThreadPool.WaitAll();
 
-		mSpatialHash.BuildOffsets();
+				mSpatialHash.BuildOffsets();
 
-		// Parallel insert: each thread scatters its chunk
-		for (int t = 0; t < mNumThreads; ++t)
-		{
-			uint32_t cStart = t * countChunk;
-			uint32_t cEnd = (t == mNumThreads - 1) ? mActiveCount : cStart + countChunk;
-			mThreadPool.Submit([this, cStart, cEnd]
+				for (int t = 0; t < mNumThreads; ++t)
 				{
-					for (uint32_t i = cStart; i < cEnd; ++i)
-						mSpatialHash.InsertAtomic(mPosX[i], mPosY[i], GetZ(i), i);
-				});
+					uint32_t cStart = t * countChunk;
+					uint32_t cEnd = (t == mNumThreads - 1) ? mActiveCount : cStart + countChunk;
+					mThreadPool.Submit([this, cStart, cEnd]
+						{
+							for (uint32_t i = cStart; i < cEnd; ++i)
+								mSpatialHash.InsertAtomic(mPosX[i], mPosY[i], GetZ(i), i);
+						});
+				}
+				mThreadPool.WaitAll();
+			}
+			else
+			{
+				for (uint32_t i = 0; i < mActiveCount; ++i)
+					mSpatialHash.Count(mPosX[i], mPosY[i], GetZ(i));
+
+				mSpatialHash.BuildOffsets();
+
+				for (uint32_t i = 0; i < mActiveCount; ++i)
+					mSpatialHash.Insert(mPosX[i], mPosY[i], GetZ(i), i);
+			}
 		}
-		mThreadPool.WaitAll();
-#else
-		for (uint32_t i = 0; i < mActiveCount; ++i)
-			mSpatialHash.Count(mPosX[i], mPosY[i], GetZ(i));
 
-		mSpatialHash.BuildOffsets();
-
-		for (uint32_t i = 0; i < mActiveCount; ++i)
-			mSpatialHash.Insert(mPosX[i], mPosY[i], GetZ(i), i);
-#endif
-#endif
-
-		// --- Phase 4: Collect active nodes and process (parallelised) ---
+		// --- Phase 4: Node interactions ---
 		mActiveNodes.clear();
 		for (uint32_t i = 0; i < mNodeActiveCount; ++i)
 		{
@@ -282,119 +281,135 @@ namespace msc
 
 		if (!mActiveNodes.empty())
 		{
-#ifdef THREAD_POOL_ENABLED
-			uint32_t nodeCount = static_cast<uint32_t>(mActiveNodes.size());
-			uint32_t nodeChunkSize = (std::max)(1u, nodeCount / static_cast<uint32_t>(mNumThreads));
-			for (int t = 0; t < mNumThreads; ++t)
+			if constexpr (SimConfig::THREADING)
 			{
-				uint32_t nStart = t * nodeChunkSize;
-				if (nStart >= nodeCount) break;
-				uint32_t nEnd = (t == mNumThreads - 1) ? nodeCount : (std::min)(nStart + nodeChunkSize, nodeCount);
-				mThreadPool.Submit([this, nStart, nEnd]
-					{
-						constexpr float maxVel = SimConfig::CIRCLE_MAX_VELOCITY;
-
-						// Raw pointers — avoids vector bounds checking in the hot loop
-						const float* pPosX = mPosX.data();
-						const float* pPosY = mPosY.data();
-						float* pVelX = mVelX.data();
-						float* pVelY = mVelY.data();
-
-						// Only grab HP pointer if death system is active
-						int32_t* pHP = nullptr;
-						if constexpr (SimConfig::CIRCLE_DEATH_ENABLED)
-							pHP = mHP.data();
-
-						for (uint32_t n = nStart; n < nEnd; ++n)
+				uint32_t nodeCount = static_cast<uint32_t>(mActiveNodes.size());
+				uint32_t nodeChunkSize = (std::max)(1u, nodeCount / static_cast<uint32_t>(mNumThreads));
+				for (int t = 0; t < mNumThreads; ++t)
+				{
+					uint32_t nStart = t * nodeChunkSize;
+					if (nStart >= nodeCount) break;
+					uint32_t nEnd = (t == mNumThreads - 1) ? nodeCount : (std::min)(nStart + nodeChunkSize, nodeCount);
+					mThreadPool.Submit([this, nStart, nEnd]
 						{
-							uint32_t i = mActiveNodes[n];
-							float radiusSqrd = mNodeRadii[i] * mNodeRadii[i];
-							float nodePX = mNodePosX[i];
-							float nodePY = mNodePosY[i];
-							float sign = (mNodeType[i] == ENodeType::Attractor) ? -1.0f : 1.0f;
-							float signStrength = sign * SimConfig::IMPULSE_NODE_STRENGTH;
+							const float* pPosX = mPosX.data();
+							const float* pPosY = mPosY.data();
+							float* pVelX = mVelX.data();
+							float* pVelY = mVelY.data();
 
-#ifdef SPATIAL_HASH_ENABLED
-							mSpatialHash.QueryBatch(nodePX, nodePY, 0.0f, mNodeRadii[i],
-								[&](const uint32_t* indices, uint32_t count)
+							int32_t* pHP = nullptr;
+							if constexpr (SimConfig::CIRCLE_DEATH_ENABLED)
+								pHP = mHP.data();
+
+							for (uint32_t n = nStart; n < nEnd; ++n)
+							{
+								uint32_t i = mActiveNodes[n];
+								float radiusSqrd = mNodeRadii[i] * mNodeRadii[i];
+								float nodePX = mNodePosX[i];
+								float nodePY = mNodePosY[i];
+								float sign = (mNodeType[i] == ENodeType::Attractor) ? -1.0f : 1.0f;
+								float signStrength = sign * SimConfig::IMPULSE_NODE_STRENGTH;
+
+								if constexpr (SimConfig::SPATIAL_HASHING)
 								{
-									ProcessNodeBatch(indices, count, nodePX, nodePY,
-										radiusSqrd, signStrength, pPosX, pPosY, pVelX, pVelY, pHP);
-								});
-#else
-							for (uint32_t j = 0; j < mActiveCount; ++j)
+									mSpatialHash.QueryBatch(nodePX, nodePY, 0.0f, mNodeRadii[i],
+										[&](const uint32_t* indices, uint32_t count)
+										{
+											ProcessNodeBatch(indices, count, nodePX, nodePY,
+												radiusSqrd, signStrength, pPosX, pPosY, pVelX, pVelY, pHP);
+										});
+								}
+								else
+								{
+									for (uint32_t j = 0; j < mActiveCount; ++j)
+										NodeActionResolution(i, j, radiusSqrd);
+								}
+							}
+						});
+				}
+				mThreadPool.WaitAll();
+			}
+			else
+			{
+				for (uint32_t n = 0; n < mActiveNodes.size(); ++n)
+				{
+					uint32_t i = mActiveNodes[n];
+					float radiusSqrd = mNodeRadii[i] * mNodeRadii[i];
+
+					if constexpr (SimConfig::SPATIAL_HASHING)
+					{
+						mSpatialHash.Query(mNodePosX[i], mNodePosY[i], GetNodeZ(i), mNodeRadii[i], [&](uint32_t j)
 							{
 								NodeActionResolution(i, j, radiusSqrd);
-							}
-#endif
-						}
-					});
-			}
-			mThreadPool.WaitAll();
-#else
-			for (uint32_t n = 0; n < mActiveNodes.size(); ++n)
-			{
-				uint32_t i = mActiveNodes[n];
-				float radiusSqrd = mNodeRadii[i] * mNodeRadii[i];
-#ifdef SPATIAL_HASH_ENABLED
-				mSpatialHash.Query(mNodePosX[i], mNodePosY[i], GetNodeZ(i), mNodeRadii[i], [&](uint32_t j)
+							});
+					}
+					else
 					{
-						NodeActionResolution(i, j, radiusSqrd);
-					});
-#else
-				for (uint32_t j = 0; j < mActiveCount; ++j)
-				{
-					NodeActionResolution(i, j, radiusSqrd);
+						for (uint32_t j = 0; j < mActiveCount; ++j)
+							NodeActionResolution(i, j, radiusSqrd);
+					}
 				}
-#endif
 			}
-#endif
 		}
 
-		// --- Phase 5: Circle-circle collision (parallelised) ---
-		if (SimConfig::CIRCLE_COLLISION_ENABLED)
+		// --- Phase 5: Circle-circle collision ---
+		if constexpr (SimConfig::CIRCLE_COLLISION_ENABLED)
 		{
-#ifdef THREAD_POOL_ENABLED
-			uint32_t collChunk = mActiveCount / mNumThreads;
-			for (int t = 0; t < mNumThreads; ++t)
+			if constexpr (SimConfig::THREADING)
 			{
-				uint32_t start = t * collChunk;
-				uint32_t end = (t == mNumThreads - 1) ? mActiveCount : start + collChunk;
-				mThreadPool.Submit([this, start, end]
-					{
-						for (uint32_t i = start; i < end; ++i)
-						{
-							float searchRadius = mRadii[i] * 2.0f;
-							mSpatialHash.Query(mPosX[i], mPosY[i], GetZ(i), searchRadius, [&](uint32_t j)
-								{
-									if (j <= i) return;
-									CircleCollisionResolution(i, j);
-								});
-						}
-					});
-			}
-			mThreadPool.WaitAll();
-#else
-			for (uint32_t i = 0; i < mActiveCount; ++i)
-			{
-				float searchRadius = mRadii[i] * 2.0f;
-#ifdef SPATIAL_HASH_ENABLED
-				mSpatialHash.Query(mPosX[i], mPosY[i], GetZ(i), searchRadius, [&](uint32_t j)
-					{
-						if (j <= i) return;
-						CircleCollisionResolution(i, j);
-					});
-#else
-				for (uint32_t j = i + 1; j < mActiveCount; ++j)
+				uint32_t collChunk = mActiveCount / mNumThreads;
+				for (int t = 0; t < mNumThreads; ++t)
 				{
-					CircleCollisionResolution(i, j);
+					uint32_t start = t * collChunk;
+					uint32_t end = (t == mNumThreads - 1) ? mActiveCount : start + collChunk;
+					mThreadPool.Submit([this, start, end]
+						{
+							for (uint32_t i = start; i < end; ++i)
+							{
+								float searchRadius = mRadii[i] * 2.0f;
+
+								if constexpr (SimConfig::SPATIAL_HASHING)
+								{
+									mSpatialHash.Query(mPosX[i], mPosY[i], GetZ(i), searchRadius, [&](uint32_t j)
+										{
+											if (j <= i) return;
+											CircleCollisionResolution(i, j);
+										});
+								}
+								else
+								{
+									for (uint32_t j = i + 1; j < mActiveCount; ++j)
+										CircleCollisionResolution(i, j);
+								}
+							}
+						});
 				}
-#endif
+				mThreadPool.WaitAll();
 			}
-#endif
+			else
+			{
+				for (uint32_t i = 0; i < mActiveCount; ++i)
+				{
+					float searchRadius = mRadii[i] * 2.0f;
+
+					if constexpr (SimConfig::SPATIAL_HASHING)
+					{
+						mSpatialHash.Query(mPosX[i], mPosY[i], GetZ(i), searchRadius, [&](uint32_t j)
+							{
+								if (j <= i) return;
+								CircleCollisionResolution(i, j);
+							});
+					}
+					else
+					{
+						for (uint32_t j = i + 1; j < mActiveCount; ++j)
+							CircleCollisionResolution(i, j);
+					}
+				}
+			}
 		}
 
-		// --- Phase 6: Remove dead circles (swap-and-pop) ---
+		// --- Phase 6: Remove dead circles ---
 		if constexpr (SimConfig::CIRCLE_DEATH_ENABLED)
 		{
 			for (uint32_t i = 0; i < mActiveCount;)
@@ -412,7 +427,6 @@ namespace msc
 					mColB[i] = mColB[last];
 					mHP[i] = mHP[last];
 					mAlive[i] = mAlive[last];
-					// Move string instead of copy — avoids heap allocation
 					mNames[i] = std::move(mNames[last]);
 
 #ifdef ENABLE_3D
@@ -429,68 +443,67 @@ namespace msc
 		}
 	}
 
-	// Render scene to current render target
 	void EngineTest::SceneRender()
 	{
-#ifdef VISUALISATION_ENABLED
+		if constexpr (!SimConfig::VISUALISATION) return;
 
-		//CIRCLE RENDER PASS
-#ifdef THREAD_POOL_ENABLED
-		uint32_t chunk = mActiveCount / mNumThreads;
-
-		for (int t = 0; t < mNumThreads; ++t)
+		// Circle render pass
+		if constexpr (SimConfig::THREADING)
 		{
-			uint32_t start = t * chunk;
-			uint32_t end = (t == mNumThreads - 1) ? mActiveCount : start + chunk;
-			mThreadPool.Submit([this, start, end]
-				{
-					for (uint32_t i = start; i < end; ++i)
+			uint32_t chunk = mActiveCount / mNumThreads;
+			for (int t = 0; t < mNumThreads; ++t)
+			{
+				uint32_t start = t * chunk;
+				uint32_t end = (t == mNumThreads - 1) ? mActiveCount : start + chunk;
+				mThreadPool.Submit([this, start, end]
 					{
-						gpuCircleData[i].posX = mPosX[i];
-						gpuCircleData[i].posY = mPosY[i];
+						for (uint32_t i = start; i < end; ++i)
+						{
+							gpuCircleData[i].posX = mPosX[i];
+							gpuCircleData[i].posY = mPosY[i];
 
 #ifdef ENABLE_3D
-						gpuCircleData[i].posZ = (mPosZ[i] + SimConfig::WORLD_SIZE_Z) / (SimConfig::WORLD_SIZE_Z * 2.0f);
+							gpuCircleData[i].posZ = (mPosZ[i] + SimConfig::WORLD_SIZE_Z) / (SimConfig::WORLD_SIZE_Z * 2.0f);
 #else
-						gpuCircleData[i].posZ = 0.1f;
+							gpuCircleData[i].posZ = 0.1f;
 #endif
 
-						gpuCircleData[i].radius = mRadii[i];
-						gpuCircleData[i].colR = mColR[i];
-						gpuCircleData[i].colG = mColG[i];
-						gpuCircleData[i].colB = mColB[i];
-						gpuCircleData[i].padding = 0.0f;
-					}
-				});
+							gpuCircleData[i].radius = mRadii[i];
+							gpuCircleData[i].colR = mColR[i];
+							gpuCircleData[i].colG = mColG[i];
+							gpuCircleData[i].colB = mColB[i];
+							gpuCircleData[i].padding = 0.0f;
+						}
+					});
+			}
+			mThreadPool.WaitAll();
 		}
-
-		mThreadPool.WaitAll();
-
-#else
-		for (uint32_t i = 0; i < mActiveCount; ++i)
+		else
 		{
-			gpuCircleData[i].posX = mPosX[i];
-			gpuCircleData[i].posY = mPosY[i];
+			for (uint32_t i = 0; i < mActiveCount; ++i)
+			{
+				gpuCircleData[i].posX = mPosX[i];
+				gpuCircleData[i].posY = mPosY[i];
 
 #ifdef ENABLE_3D
-			gpuCircleData[i].posZ = (mPosZ[i] + SimConfig::WORLD_SIZE_Z) / (SimConfig::WORLD_SIZE_Z * 2.0f);
+				gpuCircleData[i].posZ = (mPosZ[i] + SimConfig::WORLD_SIZE_Z) / (SimConfig::WORLD_SIZE_Z * 2.0f);
 #else
-			gpuCircleData[i].posZ = 0.1f;
+				gpuCircleData[i].posZ = 0.1f;
 #endif
 
-			gpuCircleData[i].radius = mRadii[i];
-			gpuCircleData[i].colR = mColR[i];
-			gpuCircleData[i].colG = mColG[i];
-			gpuCircleData[i].colB = mColB[i];
-			gpuCircleData[i].padding = 0.0f;
+				gpuCircleData[i].radius = mRadii[i];
+				gpuCircleData[i].colR = mColR[i];
+				gpuCircleData[i].colG = mColG[i];
+				gpuCircleData[i].colB = mColB[i];
+				gpuCircleData[i].padding = 0.0f;
+			}
 		}
-#endif
 
 		mEngine->Render(gpuCircleData.data(), mActiveCount);
 
-		if (!SimConfig::NODE_VISUALISATION_ENABLED) return;
+		if constexpr (!SimConfig::NODE_VISUALISATION_ENABLED) return;
 
-		//NODE RENDER PASS
+		// Node render pass
 		for (uint32_t i = 0; i < mNodeActiveCount; ++i)
 		{
 			gpuNodeData[i].posX = mNodePosX[i];
@@ -507,28 +520,24 @@ namespace msc
 			gpuNodeData[i].padding = 1.0f;
 		}
 		mEngine->Render(gpuNodeData.data(), mNodeActiveCount);
-
-#endif
 	}
 
 	int EngineTest::Run()
 	{
-#ifdef VISUALISATION_ENABLED
-		mWindowSize = { 1600, 960 };
-		SDL_SetWindowSize(mWindow, mWindowSize.x(), mWindowSize.y());
-		SDL_SetWindowPosition(mWindow, 32, 48);
-		SDL_ShowWindow(mWindow);
-		mEngine = std::make_unique<EngineDX>(mWindow);
-#endif
-
-		if (!SceneSetup())
+		if constexpr (SimConfig::VISUALISATION)
 		{
-			return EXIT_FAILURE;
+			mWindowSize = { 1600, 960 };
+			SDL_SetWindowSize(mWindow, mWindowSize.x(), mWindowSize.y());
+			SDL_SetWindowPosition(mWindow, 32, 48);
+			SDL_ShowWindow(mWindow);
+			mEngine = std::make_unique<EngineDX>(mWindow);
 		}
 
-#ifdef VISUALISATION_ENABLED
-		mEngine->SetRenderMode(RenderMode::Cutout);
-#endif
+		if (!SceneSetup())
+			return EXIT_FAILURE;
+
+		if constexpr (SimConfig::VISUALISATION)
+			mEngine->SetRenderMode(RenderMode::Cutout);
 
 		mTimer.Reset();
 		mTimer.Start();
@@ -536,28 +545,33 @@ namespace msc
 		while (!PollEvents() && !mInput.KeyHit(SDLK_ESCAPE))
 		{
 			SceneUpdate();
-#ifdef VISUALISATION_ENABLED
-			mEngine->ClearBackBuffer();
-			SceneRender();
-			mEngine->Present();
-#endif
+
+			if constexpr (SimConfig::VISUALISATION)
+			{
+				mEngine->ClearBackBuffer();
+				SceneRender();
+				mEngine->Present();
+			}
 
 			UpdateFrameTime();
 
-#ifdef VISUALISATION_ENABLED
-			std::string title = "FPS: " + std::to_string(1.0f / mAverageFrameTime);
-			SDL_SetWindowTitle(mWindow, title.c_str());
-#else
-			static float printTimer = 0.0f;
-			printTimer += mFrameTime;
-			if (printTimer >= 1.0f)
+			if constexpr (SimConfig::VISUALISATION)
 			{
-				std::cout << "Circles: " << mActiveCount
-					<< " | Avg Frame: " << (mAverageFrameTime * 1000.0f) << "ms"
-					<< " | FPS: " << (1.0f / mAverageFrameTime) << std::endl;
-				printTimer = 0.0f;
+				std::string title = "FPS: " + std::to_string(1.0f / mAverageFrameTime);
+				SDL_SetWindowTitle(mWindow, title.c_str());
 			}
-#endif
+			else
+			{
+				static float printTimer = 0.0f;
+				printTimer += mFrameTime;
+				if (printTimer >= 1.0f)
+				{
+					std::cout << "Circles: " << mActiveCount
+						<< " | Avg Frame: " << (mAverageFrameTime * 1000.0f) << "ms"
+						<< " | FPS: " << (1.0f / mAverageFrameTime) << std::endl;
+					printTimer = 0.0f;
+				}
+			}
 		}
 
 		return EXIT_SUCCESS;
@@ -571,7 +585,7 @@ namespace msc
 	{
 		for (uint32_t i = start; i < end; ++i)
 		{
-			if (SimConfig::ENABLE_WALLS)
+			if constexpr (SimConfig::ENABLE_WALLS)
 			{
 				if (mPosX[i] >= SimConfig::WORLD_SIZE_X || mPosX[i] <= -SimConfig::WORLD_SIZE_X)
 					mVelX[i] = -mVelX[i];
@@ -629,63 +643,6 @@ namespace msc
 				mHP[circleIndex] -= 10;
 				if (mHP[circleIndex] <= 0)
 					mAlive[circleIndex] = 0;
-			}
-		}
-	}
-
-	void EngineTest::CircleCollisionResolution(uint32_t i, uint32_t j)
-	{
-		float dx = mPosX[j] - mPosX[i];
-		float dy = mPosY[j] - mPosY[i];
-
-#ifdef ENABLE_3D
-		float dz = mPosZ[j] - mPosZ[i];
-		float distSqrd = dx * dx + dy * dy + dz * dz;
-#else
-		float distSqrd = dx * dx + dy * dy;
-#endif
-
-		float sumRadii = mRadii[i] + mRadii[j];
-		float sumRadiiSqrd = sumRadii * sumRadii;
-
-		if (distSqrd < sumRadiiSqrd && distSqrd > 0.0001f)
-		{
-			float dist = sqrt(distSqrd);
-			float invDist = 1.0f / dist;
-			float overlap = sumRadii - dist;
-
-			float nx = dx * invDist;
-			float ny = dy * invDist;
-
-			float halfOverlap = overlap * 0.5f;
-			mPosX[i] -= nx * halfOverlap;
-			mPosY[i] -= ny * halfOverlap;
-			mPosX[j] += nx * halfOverlap;
-			mPosY[j] += ny * halfOverlap;
-
-#ifdef ENABLE_3D
-			float nz = dz * invDist;
-			mPosZ[i] -= nz * halfOverlap;
-			mPosZ[j] += nz * halfOverlap;
-#endif
-
-			float relVelN = (mVelX[j] - mVelX[i]) * nx + (mVelY[j] - mVelY[i]) * ny;
-
-#ifdef ENABLE_3D
-			relVelN += (mVelZ[j] - mVelZ[i]) * nz;
-#endif
-
-			if (relVelN < 0.0f)
-			{
-				mVelX[i] += relVelN * nx;
-				mVelY[i] += relVelN * ny;
-				mVelX[j] -= relVelN * nx;
-				mVelY[j] -= relVelN * ny;
-
-#ifdef ENABLE_3D
-				mVelZ[i] += relVelN * nz;
-				mVelZ[j] -= relVelN * nz;
-#endif
 			}
 		}
 	}
@@ -790,6 +747,63 @@ namespace msc
 		}
 	}
 
+	void EngineTest::CircleCollisionResolution(uint32_t i, uint32_t j)
+	{
+		float dx = mPosX[j] - mPosX[i];
+		float dy = mPosY[j] - mPosY[i];
+
+#ifdef ENABLE_3D
+		float dz = mPosZ[j] - mPosZ[i];
+		float distSqrd = dx * dx + dy * dy + dz * dz;
+#else
+		float distSqrd = dx * dx + dy * dy;
+#endif
+
+		float sumRadii = mRadii[i] + mRadii[j];
+		float sumRadiiSqrd = sumRadii * sumRadii;
+
+		if (distSqrd < sumRadiiSqrd && distSqrd > 0.0001f)
+		{
+			float dist = sqrt(distSqrd);
+			float invDist = 1.0f / dist;
+			float overlap = sumRadii - dist;
+
+			float nx = dx * invDist;
+			float ny = dy * invDist;
+
+			float halfOverlap = overlap * 0.5f;
+			mPosX[i] -= nx * halfOverlap;
+			mPosY[i] -= ny * halfOverlap;
+			mPosX[j] += nx * halfOverlap;
+			mPosY[j] += ny * halfOverlap;
+
+#ifdef ENABLE_3D
+			float nz = dz * invDist;
+			mPosZ[i] -= nz * halfOverlap;
+			mPosZ[j] += nz * halfOverlap;
+#endif
+
+			float relVelN = (mVelX[j] - mVelX[i]) * nx + (mVelY[j] - mVelY[i]) * ny;
+
+#ifdef ENABLE_3D
+			relVelN += (mVelZ[j] - mVelZ[i]) * nz;
+#endif
+
+			if (relVelN < 0.0f)
+			{
+				mVelX[i] += relVelN * nx;
+				mVelY[i] += relVelN * ny;
+				mVelX[j] -= relVelN * nx;
+				mVelY[j] -= relVelN * ny;
+
+#ifdef ENABLE_3D
+				mVelZ[i] += relVelN * nz;
+				mVelZ[j] -= relVelN * nz;
+#endif
+			}
+		}
+	}
+
 #pragma endregion
 
 #pragma region Event Handling
@@ -814,29 +828,18 @@ namespace msc
 		while (SDL_PollEvent(&e))
 		{
 			if (e.type == SDL_QUIT)
-			{
 				return true;
-			}
+
 			if (e.type == SDL_KEYDOWN || e.type == SDL_KEYUP)
-			{
 				mInput.KeyEvent(e.key);
-			}
 			else if (e.type == SDL_MOUSEBUTTONDOWN || e.type == SDL_MOUSEBUTTONUP)
-			{
 				mInput.MouseButtonEvent(e.button);
-			}
 			else if (e.type == SDL_MOUSEMOTION)
-			{
 				mInput.MouseMotionEvent(e.motion);
-			}
 			else if (e.type == SDL_MOUSEWHEEL)
-			{
 				mInput.MouseWheelEvent(e.wheel);
-			}
 			else if (e.type == SDL_CONTROLLERDEVICEADDED || e.type == SDL_CONTROLLERDEVICEREMOVED)
-			{
 				mInput.UpdateAttachedControllers();
-			}
 		}
 		return false;
 	}

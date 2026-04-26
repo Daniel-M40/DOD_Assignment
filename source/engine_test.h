@@ -49,38 +49,33 @@ namespace msc
 		void UpdateFrameTime();
 		static int EventFilter(void* userdata, SDL_Event* event);
 
+		void ProcessNodeBatch(const uint32_t* indices, uint32_t count,
+			float nodePX, float nodePY, float radiusSqrd, float signStrength,
+			const float* pPosX, const float* pPosY, float* pVelX, float* pVelY,
+			int32_t* pHP);
+
 	private:
-		// Platform specifics
-#ifdef VISUALISATION_ENABLED
+		// Platform — always declared, conditionally used via if constexpr
 		platform::SDL mSDL;
 		platform::Window mWindow;
+		platform::Input mInput;
+		platform::Timer mTimer;
 
+		// Visualisation — empty when disabled (zero cost, no allocation)
 		std::vector<CircleGPU> gpuCircleData;
 		std::vector<CircleGPU> gpuNodeData;
 		std::unique_ptr<EngineDX> mEngine;
 		Vector2i mWindowSize;
-#endif
 
-		platform::Input mInput;
-		platform::Timer mTimer;
-
-		//-----------------------------------------------------
-		// Thread Pool
-		//-----------------------------------------------------
-#ifdef THREAD_POOL_ENABLED
+		// Thread pool — idle when THREADING == false
 		ThreadPool mThreadPool;
 		int mNumThreads = std::thread::hardware_concurrency();
-#endif
 
-		//-----------------------------------------------------
-		// Spatial Hash
-		//-----------------------------------------------------
-#ifdef SPATIAL_HASH_ENABLED
+		// Spatial hash — unused when SPATIAL_HASHING == false
 #ifdef ENABLE_3D
 		SpatialHash<3> mSpatialHash;
 #else
 		SpatialHash<2> mSpatialHash;
-#endif
 #endif
 
 		//-----------------------------------------------------
@@ -101,10 +96,9 @@ namespace msc
 		uint32_t					mActiveCount = 0;
 		uint32_t					mNodeActiveCount = 0;
 
-		// Death system data — only allocated when death is enabled to save cache
+		// Death system — only allocated when enabled
 		std::vector<int32_t>		mHP;
 		std::vector<uint8_t>		mAlive;
-		// Names only allocated when death is enabled (used for debug logging)
 		std::vector<std::string>	mNames;
 
 		//-----------------------------------------------------
@@ -113,8 +107,8 @@ namespace msc
 		std::vector<float>		mNodePosX;
 		std::vector<float>		mNodePosY;
 #ifdef ENABLE_3D
-		std::vector<float>			mNodePosZ;
-		std::vector<float>			mNodeVelZ;
+		std::vector<float>		mNodePosZ;
+		std::vector<float>		mNodeVelZ;
 #endif
 		std::vector<float>		mNodeVelX;
 		std::vector<float>		mNodeVelY;
@@ -134,7 +128,6 @@ namespace msc
 		float mAverageFrameTime = 0.01f;
 		float mAverageFPS = 1 / mAverageFrameTime;
 		const float mFPSUpdateTime = 0.5f;
-
 
 		void UpdateCircles(uint32_t start, uint32_t end);
 		void NodeActionResolution(uint32_t nodeIndex, uint32_t circleIndex, float radiusSqrd);
