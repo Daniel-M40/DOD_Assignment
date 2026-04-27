@@ -104,12 +104,13 @@
       <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>..\external\SDL2-2.0.4\include;..\external\eigen-3.2.9;..\external\CImg-1.7.5;..\external\jpeg-9b;..\external\lpng1625\</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\external\SDL2-2.0.4\include;.\external\eigen-5.0.0;.\external\CImg-1.7.5;.\external\jpeg-9b;.\external\lpng1625\</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>
       </DisableSpecificWarnings>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
-      <AdditionalLibraryDirectories>..\external\SDL2-2.0.4\VisualC\x64\Debug;..\external\jpeg-9b\x64\Release;..\external\lpng1625\projects\vstudio\x64\Debug</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>.\external\SDL2-2.0.4\VisualC\x64\Debug;.\external\jpeg-9b\x64\Release;.\external\lpng1625\projects\vstudio\x64\Debug</AdditionalLibraryDirectories>
       <AdditionalDependencies>dxgi.lib;d3d11.lib;SDL2.lib;jpeg.lib;libpng16.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <SubSystem>Windows</SubSystem>
       <EntryPointSymbol>mainCRTStartup</EntryPointSymbol>
@@ -143,16 +144,16 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>.\external\SDL2-2.0.4\include;.\external\eigen-3.2.9;.\external\CImg-1.7.5;.\external\jpeg-9b;.\external\lpng1625\</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\external\SDL2-2.0.4\include;.\external\eigen-5.0.0;.\external\CImg-1.7.5;.\external\jpeg-9b;.\external\lpng1625\</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>
       </DisableSpecificWarnings>
       <FloatingPointModel>Fast</FloatingPointModel>
-      <LanguageStandard>stdcpp14</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>..\external\SDL2-2.0.4\VisualC\x64\Release;..\external\jpeg-9b\x64\Release;..\external\lpng1625\projects\vstudio\x64\Release</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>.\external\SDL2-2.0.4\VisualC\x64\Release;.\external\jpeg-9b\x64\Release;.\external\lpng1625\projects\vstudio\x64\Release</AdditionalLibraryDirectories>
       <AdditionalDependencies>dxgi.lib;d3d11.lib;SDL2.lib;jpeg.lib;libpng16.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <SubSystem>Console</SubSystem>
       <EntryPointSymbol>mainCRTStartup</EntryPointSymbol>
