@@ -37,10 +37,7 @@ namespace msc
 		mActiveCount = SimConfig::NUM_CIRCLES;
 		mNodeActiveCount = SimConfig::NUM_CIRCLES / 20;
 
-		mPosX.resize(mActiveCount);
-		mPosY.resize(mActiveCount);
-		mVelX.resize(mActiveCount);
-		mVelY.resize(mActiveCount);
+		mCircleData.resize(mActiveCount);
 		mRadii.resize(mActiveCount);
 		mColR.resize(mActiveCount);
 		mColG.resize(mActiveCount);
@@ -90,10 +87,10 @@ namespace msc
 
 		for (uint32_t i = 0; i < mActiveCount; ++i)
 		{
-			mPosX[i] = RandomInRange(-worldX, worldX);
-			mPosY[i] = RandomInRange(-worldY, worldY);
-			mVelX[i] = RandomInRange(minVel, maxVel);
-			mVelY[i] = RandomInRange(minVel, maxVel);
+			mCircleData[i].posX = RandomInRange(-worldX, worldX);
+			mCircleData[i].posY = RandomInRange(-worldY, worldY);
+			mCircleData[i].velX = RandomInRange(minVel, maxVel);
+			mCircleData[i].velY = RandomInRange(minVel, maxVel);
 			mRadii[i] = SimConfig::CIRCLE_RADIUS;
 			mColR[i] = RandomInRange(0.0f, 1.0f);
 			mColG[i] = RandomInRange(0.0f, 1.0f);
@@ -236,7 +233,7 @@ namespace msc
 					mThreadPool.Submit([this, cStart, cEnd]
 						{
 							for (uint32_t i = cStart; i < cEnd; ++i)
-								mSpatialHash.CountAtomic(mPosX[i], mPosY[i], GetZ(i));
+								mSpatialHash.CountAtomic(mCircleData[i].posX, mCircleData[i].posY, GetZ(i));
 						});
 				}
 				mThreadPool.WaitAll();
@@ -250,7 +247,7 @@ namespace msc
 					mThreadPool.Submit([this, cStart, cEnd]
 						{
 							for (uint32_t i = cStart; i < cEnd; ++i)
-								mSpatialHash.InsertAtomic(mPosX[i], mPosY[i], GetZ(i), i);
+								mSpatialHash.InsertAtomic(mCircleData[i].posX, mCircleData[i].posY, GetZ(i), i);
 						});
 				}
 				mThreadPool.WaitAll();
@@ -258,12 +255,12 @@ namespace msc
 			else
 			{
 				for (uint32_t i = 0; i < mActiveCount; ++i)
-					mSpatialHash.Count(mPosX[i], mPosY[i], GetZ(i));
+					mSpatialHash.Count(mCircleData[i].posX, mCircleData[i].posY, GetZ(i));
 
 				mSpatialHash.BuildOffsets();
 
 				for (uint32_t i = 0; i < mActiveCount; ++i)
-					mSpatialHash.Insert(mPosX[i], mPosY[i], GetZ(i), i);
+					mSpatialHash.Insert(mCircleData[i].posX, mCircleData[i].posY, GetZ(i), i);
 			}
 		}
 
@@ -292,11 +289,6 @@ namespace msc
 					uint32_t nEnd = (t == mNumThreads - 1) ? nodeCount : (std::min)(nStart + nodeChunkSize, nodeCount);
 					mThreadPool.Submit([this, nStart, nEnd]
 						{
-							const float* pPosX = mPosX.data();
-							const float* pPosY = mPosY.data();
-							float* pVelX = mVelX.data();
-							float* pVelY = mVelY.data();
-
 							int32_t* pHP = nullptr;
 							if constexpr (SimConfig::CIRCLE_DEATH_ENABLED)
 								pHP = mHP.data();
@@ -315,12 +307,16 @@ namespace msc
 									mSpatialHash.QueryBatch(nodePX, nodePY, 0.0f, mNodeRadii[i],
 										[&](const uint32_t* indices, uint32_t count)
 										{
+											if (!SimConfig::NODES_ACTIVE) return;
+
 											ProcessNodeBatch(indices, count, nodePX, nodePY,
-												radiusSqrd, signStrength, pPosX, pPosY, pVelX, pVelY, pHP);
+												radiusSqrd, signStrength, nullptr, nullptr, nullptr, nullptr, pHP);
 										});
 								}
 								else
 								{
+									if (!SimConfig::NODES_ACTIVE) return;
+
 									for (uint32_t j = 0; j < mActiveCount; ++j)
 										NodeActionResolution(i, j, radiusSqrd);
 								}
@@ -340,11 +336,15 @@ namespace msc
 					{
 						mSpatialHash.Query(mNodePosX[i], mNodePosY[i], GetNodeZ(i), mNodeRadii[i], [&](uint32_t j)
 							{
+								if (!SimConfig::NODES_ACTIVE) return;
+
 								NodeActionResolution(i, j, radiusSqrd);
 							});
 					}
 					else
 					{
+						if (!SimConfig::NODES_ACTIVE) return;
+
 						for (uint32_t j = 0; j < mActiveCount; ++j)
 							NodeActionResolution(i, j, radiusSqrd);
 					}
@@ -370,7 +370,7 @@ namespace msc
 
 								if constexpr (SimConfig::SPATIAL_HASHING)
 								{
-									mSpatialHash.Query(mPosX[i], mPosY[i], GetZ(i), searchRadius, [&](uint32_t j)
+									mSpatialHash.Query(mCircleData[i].posX, mCircleData[i].posY, GetZ(i), searchRadius, [&](uint32_t j)
 										{
 											if (j <= i) return;
 											CircleCollisionResolution(i, j);
@@ -394,7 +394,7 @@ namespace msc
 
 					if constexpr (SimConfig::SPATIAL_HASHING)
 					{
-						mSpatialHash.Query(mPosX[i], mPosY[i], GetZ(i), searchRadius, [&](uint32_t j)
+						mSpatialHash.Query(mCircleData[i].posX, mCircleData[i].posY, GetZ(i), searchRadius, [&](uint32_t j)
 							{
 								if (j <= i) return;
 								CircleCollisionResolution(i, j);
@@ -417,10 +417,8 @@ namespace msc
 				if (mAlive[i] == 0)
 				{
 					uint32_t last = mActiveCount - 1;
-					mPosX[i] = mPosX[last];
-					mPosY[i] = mPosY[last];
-					mVelX[i] = mVelX[last];
-					mVelY[i] = mVelY[last];
+					// Single struct copy replaces 4 separate float copies
+					mCircleData[i] = mCircleData[last];
 					mRadii[i] = mRadii[last];
 					mColR[i] = mColR[last];
 					mColG[i] = mColG[last];
@@ -447,7 +445,7 @@ namespace msc
 	{
 		if constexpr (!SimConfig::VISUALISATION) return;
 
-		// Circle render pass
+		// Circle render pass reads position from single CircleData stream
 		if constexpr (SimConfig::THREADING)
 		{
 			uint32_t chunk = mActiveCount / mNumThreads;
@@ -459,8 +457,8 @@ namespace msc
 					{
 						for (uint32_t i = start; i < end; ++i)
 						{
-							gpuCircleData[i].posX = mPosX[i];
-							gpuCircleData[i].posY = mPosY[i];
+							gpuCircleData[i].posX = mCircleData[i].posX;
+							gpuCircleData[i].posY = mCircleData[i].posY;
 
 #ifdef ENABLE_3D
 							gpuCircleData[i].posZ = (mPosZ[i] + SimConfig::WORLD_SIZE_Z) / (SimConfig::WORLD_SIZE_Z * 2.0f);
@@ -482,8 +480,8 @@ namespace msc
 		{
 			for (uint32_t i = 0; i < mActiveCount; ++i)
 			{
-				gpuCircleData[i].posX = mPosX[i];
-				gpuCircleData[i].posY = mPosY[i];
+				gpuCircleData[i].posX = mCircleData[i].posX;
+				gpuCircleData[i].posY = mCircleData[i].posY;
 
 #ifdef ENABLE_3D
 				gpuCircleData[i].posZ = (mPosZ[i] + SimConfig::WORLD_SIZE_Z) / (SimConfig::WORLD_SIZE_Z * 2.0f);
@@ -581,17 +579,20 @@ namespace msc
 
 #pragma region Circle and Node Update
 
+
 	void EngineTest::UpdateCircles(uint32_t start, uint32_t end)
 	{
 		for (uint32_t i = start; i < end; ++i)
 		{
+			CircleData& m = mCircleData[i];
+
 			if constexpr (SimConfig::ENABLE_WALLS)
 			{
-				if (mPosX[i] >= SimConfig::WORLD_SIZE_X || mPosX[i] <= -SimConfig::WORLD_SIZE_X)
-					mVelX[i] = -mVelX[i];
+				if (m.posX >= SimConfig::WORLD_SIZE_X || m.posX <= -SimConfig::WORLD_SIZE_X)
+					m.velX = -m.velX;
 
-				if (mPosY[i] >= SimConfig::WORLD_SIZE_Y || mPosY[i] <= -SimConfig::WORLD_SIZE_Y)
-					mVelY[i] = -mVelY[i];
+				if (m.posY >= SimConfig::WORLD_SIZE_Y || m.posY <= -SimConfig::WORLD_SIZE_Y)
+					m.velY = -m.velY;
 
 #ifdef ENABLE_3D
 				if (mPosZ[i] >= SimConfig::WORLD_SIZE_Z || mPosZ[i] <= -SimConfig::WORLD_SIZE_Z)
@@ -599,8 +600,8 @@ namespace msc
 #endif
 			}
 
-			mPosX[i] += mVelX[i] * mFrameTime;
-			mPosY[i] += mVelY[i] * mFrameTime;
+			m.posX += m.velX * mFrameTime;
+			m.posY += m.velY * mFrameTime;
 
 #ifdef ENABLE_3D
 			mPosZ[i] += mVelZ[i] * mFrameTime;
@@ -610,8 +611,8 @@ namespace msc
 
 	void EngineTest::NodeActionResolution(uint32_t nodeIndex, uint32_t circleIndex, float radiusSqrd)
 	{
-		float dx = mPosX[circleIndex] - mNodePosX[nodeIndex];
-		float dy = mPosY[circleIndex] - mNodePosY[nodeIndex];
+		float dx = mCircleData[circleIndex].posX - mNodePosX[nodeIndex];
+		float dy = mCircleData[circleIndex].posY - mNodePosY[nodeIndex];
 
 #ifdef ENABLE_3D
 		float dz = mPosZ[circleIndex] - mNodePosZ[nodeIndex];
@@ -625,15 +626,15 @@ namespace msc
 			float sign = (mNodeType[nodeIndex] == ENodeType::Attractor) ? -1.0f : 1.0f;
 			float factor = sign * SimConfig::IMPULSE_NODE_STRENGTH / distSqrd;
 
-			mVelX[circleIndex] += dx * factor;
-			mVelY[circleIndex] += dy * factor;
+			mCircleData[circleIndex].velX += dx * factor;
+			mCircleData[circleIndex].velY += dy * factor;
 #ifdef ENABLE_3D
 			mVelZ[circleIndex] += dz * factor;
 #endif
 
 			constexpr float maxVel = SimConfig::CIRCLE_MAX_VELOCITY;
-			mVelX[circleIndex] = (std::max)(-maxVel, (std::min)(maxVel, mVelX[circleIndex]));
-			mVelY[circleIndex] = (std::max)(-maxVel, (std::min)(maxVel, mVelY[circleIndex]));
+			mCircleData[circleIndex].velX = (std::max)(-maxVel, (std::min)(maxVel, mCircleData[circleIndex].velX));
+			mCircleData[circleIndex].velY = (std::max)(-maxVel, (std::min)(maxVel, mCircleData[circleIndex].velY));
 #ifdef ENABLE_3D
 			mVelZ[circleIndex] = (std::max)(-maxVel, (std::min)(maxVel, mVelZ[circleIndex]));
 #endif
@@ -665,8 +666,8 @@ namespace msc
 			float px[BATCH], py[BATCH];
 			for (uint32_t b = 0; b < BATCH; ++b)
 			{
-				px[b] = pPosX[idx[b]];
-				py[b] = pPosY[idx[b]];
+				px[b] = mCircleData[idx[b]].posX;
+				py[b] = mCircleData[idx[b]].posY;
 			}
 
 			float dx[BATCH], dy[BATCH], distSqrd[BATCH];
@@ -693,16 +694,16 @@ namespace msc
 
 			for (uint32_t b = 0; b < BATCH; ++b)
 			{
-				float vx = pVelX[idx[b]] + dx[b] * factor[b];
-				float vy = pVelY[idx[b]] + dy[b] * factor[b];
+				float vx = mCircleData[idx[b]].velX + dx[b] * factor[b];
+				float vy = mCircleData[idx[b]].velY + dy[b] * factor[b];
 
 				if (vx > maxVel)  vx = maxVel;
 				if (vx < -maxVel) vx = -maxVel;
 				if (vy > maxVel)  vy = maxVel;
 				if (vy < -maxVel) vy = -maxVel;
 
-				pVelX[idx[b]] = vx;
-				pVelY[idx[b]] = vy;
+				mCircleData[idx[b]].velX = vx;
+				mCircleData[idx[b]].velY = vy;
 			}
 
 			if constexpr (SimConfig::CIRCLE_DEATH_ENABLED)
@@ -722,20 +723,20 @@ namespace msc
 		for (; e < count; ++e)
 		{
 			uint32_t j = indices[e];
-			float dx = pPosX[j] - nodePX;
-			float dy = pPosY[j] - nodePY;
+			float dx = mCircleData[j].posX - nodePX;
+			float dy = mCircleData[j].posY - nodePY;
 			float distSqrd = dx * dx + dy * dy;
 
 			if (distSqrd < radiusSqrd && distSqrd > 0.0001f)
 			{
 				float factor = signStrength / distSqrd;
-				pVelX[j] += dx * factor;
-				pVelY[j] += dy * factor;
+				mCircleData[j].velX += dx * factor;
+				mCircleData[j].velY += dy * factor;
 
-				if (pVelX[j] > maxVel)  pVelX[j] = maxVel;
-				if (pVelX[j] < -maxVel) pVelX[j] = -maxVel;
-				if (pVelY[j] > maxVel)  pVelY[j] = maxVel;
-				if (pVelY[j] < -maxVel) pVelY[j] = -maxVel;
+				if (mCircleData[j].velX > maxVel)  mCircleData[j].velX = maxVel;
+				if (mCircleData[j].velX < -maxVel) mCircleData[j].velX = -maxVel;
+				if (mCircleData[j].velY > maxVel)  mCircleData[j].velY = maxVel;
+				if (mCircleData[j].velY < -maxVel) mCircleData[j].velY = -maxVel;
 
 				if constexpr (SimConfig::CIRCLE_DEATH_ENABLED)
 				{
@@ -749,8 +750,8 @@ namespace msc
 
 	void EngineTest::CircleCollisionResolution(uint32_t i, uint32_t j)
 	{
-		float dx = mPosX[j] - mPosX[i];
-		float dy = mPosY[j] - mPosY[i];
+		float dx = mCircleData[j].posX - mCircleData[i].posX;
+		float dy = mCircleData[j].posY - mCircleData[i].posY;
 
 #ifdef ENABLE_3D
 		float dz = mPosZ[j] - mPosZ[i];
@@ -772,10 +773,10 @@ namespace msc
 			float ny = dy * invDist;
 
 			float halfOverlap = overlap * 0.5f;
-			mPosX[i] -= nx * halfOverlap;
-			mPosY[i] -= ny * halfOverlap;
-			mPosX[j] += nx * halfOverlap;
-			mPosY[j] += ny * halfOverlap;
+			mCircleData[i].posX -= nx * halfOverlap;
+			mCircleData[i].posY -= ny * halfOverlap;
+			mCircleData[j].posX += nx * halfOverlap;
+			mCircleData[j].posY += ny * halfOverlap;
 
 #ifdef ENABLE_3D
 			float nz = dz * invDist;
@@ -783,7 +784,7 @@ namespace msc
 			mPosZ[j] += nz * halfOverlap;
 #endif
 
-			float relVelN = (mVelX[j] - mVelX[i]) * nx + (mVelY[j] - mVelY[i]) * ny;
+			float relVelN = (mCircleData[j].velX - mCircleData[i].velX) * nx + (mCircleData[j].velY - mCircleData[i].velY) * ny;
 
 #ifdef ENABLE_3D
 			relVelN += (mVelZ[j] - mVelZ[i]) * nz;
@@ -791,10 +792,10 @@ namespace msc
 
 			if (relVelN < 0.0f)
 			{
-				mVelX[i] += relVelN * nx;
-				mVelY[i] += relVelN * ny;
-				mVelX[j] -= relVelN * nx;
-				mVelY[j] -= relVelN * ny;
+				mCircleData[i].velX += relVelN * nx;
+				mCircleData[i].velY += relVelN * ny;
+				mCircleData[j].velX -= relVelN * nx;
+				mCircleData[j].velY -= relVelN * ny;
 
 #ifdef ENABLE_3D
 				mVelZ[i] += relVelN * nz;

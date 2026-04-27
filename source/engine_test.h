@@ -28,6 +28,12 @@ namespace msc
 		Repulsor,
 	};
 
+	//Hot data
+	struct CircleData
+	{
+		float posX, posY, velX, velY;
+	};
+
 	class EngineTest
 	{
 	public:
@@ -79,16 +85,13 @@ namespace msc
 #endif
 
 		//-----------------------------------------------------
-		// Circle SoA data
+		// Circle data — hot motion struct + cold attributes
 		//-----------------------------------------------------
-		std::vector<float>			mPosX;
-		std::vector<float>			mPosY;
+		std::vector<CircleData>	mCircleData;	// Hot: posX, posY, velX, velY interleaved
 #ifdef ENABLE_3D
 		std::vector<float>			mPosZ;
 		std::vector<float>			mVelZ;
 #endif
-		std::vector<float>			mVelX;
-		std::vector<float>			mVelY;
 		std::vector<float>			mRadii;
 		std::vector<float>			mColR;
 		std::vector<float>			mColG;

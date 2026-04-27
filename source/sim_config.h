@@ -15,7 +15,7 @@ public:
     //---------------------------------
     // WORLD CONFIG
     //---------------------------------
-    static const int NUM_CIRCLES = 500000;
+    static const int NUM_CIRCLES = 1000000;
     static const int WORLD_SIZE_X = 1000;
     static const int WORLD_SIZE_Y = 1000;
     static const int WORLD_SIZE_Z = 1000;
@@ -24,7 +24,7 @@ public:
     //---------------------------------
     // SPATIAL HASH CONFIG
     //---------------------------------
-    static const int CELL_SIZE = 60;
+    static const int CELL_SIZE = 4;
 
     //---------------------------------
     // CIRCLE CONFIG
@@ -38,6 +38,8 @@ public:
     //---------------------------------
     // NODE CONFIG
     //---------------------------------
+    static constexpr bool NODES_ACTIVE = true;
+
     static constexpr float NODE_MIN_RADIUS = 10.f;
     static constexpr float NODE_MAX_RADIUS = 60.f;
     static constexpr float NODE_MIN_TIME = 1.f;
