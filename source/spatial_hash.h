@@ -27,7 +27,7 @@ public:
         mCounts.resize(mNumCells + 1, 0);
         mEntries.reserve(500000);
 
-        // Allocate atomic arrays (can't use vector — atomics are non-copyable)
+        // Allocate atomic arrays (atomics are non-copyable)
         mAtomicCounts = std::make_unique<std::atomic<uint32_t>[]>(mNumCells + 1);
         mAtomicWriteHeads = std::make_unique<std::atomic<uint32_t>[]>(mNumCells);
     }
@@ -61,10 +61,12 @@ public:
         uint32_t totalCount = 0;
         for (uint32_t i = 0; i < mNumCells; ++i)
         {
-            uint32_t c = mAtomicCounts[i].load(std::memory_order_relaxed);
-            if (c == 0) c = mCounts[i];  // Fallback to serial counts if atomics weren't used
-            mCounts[i] = c;
-            totalCount += c;
+            uint32_t count = mAtomicCounts[i].load(std::memory_order_relaxed);
+
+            // Fallback to serial counts if atomics weren't used
+        	if (count == 0) count = mCounts[i];  
+            mCounts[i] = count;
+            totalCount += count;
         }
 
         mInsertCount = totalCount;
